@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Science-Attention Gap</title>
+<style>
+  :root { --bg:#0d1117; --surface:#161b22; --border:#30363d; --text:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149; --orange:#d29922; --purple:#bc8cff; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  .header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .header h1 { font-size:18px; font-weight:600; }
+  .header h1 span { color:var(--dim); font-weight:400; }
+  .header-nav { display:flex; gap:8px; }
+  .header-nav a { font-size:12px; padding:4px 10px; border:1px solid var(--border); border-radius:6px; }
+
+  .container { max-width:1200px; margin:0 auto; padding:24px; }
+
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .stat-card .label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .stat-card .value { font-size:24px; font-weight:600; }
+  .stat-card .value.under { color:var(--green); }
+  .stat-card .value.over { color:var(--orange); }
+  .stat-card .value.neutral { color:var(--accent); }
+  .stat-card .note { font-size:11px; color:var(--dim); margin-top:4px; }
+
+  .section { margin-bottom:32px; }
+  .section h2 { font-size:16px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .section h2 span { color:var(--dim); font-weight:400; font-size:13px; }
+
+  /* Field gap bar chart */
+  .field-chart { display:flex; flex-direction:column; gap:4px; }
+  .field-bar { display:flex; align-items:center; gap:8px; height:24px; }
+  .field-bar .fname { width:180px; font-size:11px; text-align:right; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
+  .field-bar .bar-container { flex:1; position:relative; height:16px; }
+  .field-bar .bar-bg { position:absolute; top:0; left:0; right:0; bottom:0; background:var(--surface); border:1px solid var(--border); border-radius:3px; }
+  .field-bar .bar-center { position:absolute; top:0; bottom:0; left:50%; width:1px; background:var(--dim); opacity:0.3; }
+  .field-bar .bar-fill { position:absolute; top:2px; bottom:2px; border-radius:2px; }
+  .field-bar .bar-fill.positive { background:var(--green); }
+  .field-bar .bar-fill.negative { background:var(--orange); }
+  .field-bar .val { width:50px; font-size:11px; font-family:monospace; }
+  .field-bar .cnt { width:30px; font-size:10px; color:var(--dim); text-align:right; }
+
+  /* Tables */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:8px 10px; color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); }
+  td { padding:8px 10px; border-bottom:1px solid var(--border); }
+  tr:hover td { background:rgba(88,166,255,0.04); }
+  .gap-pos { color:var(--green); font-weight:600; }
+  .gap-neg { color:var(--orange); font-weight:600; }
+  .num { text-align:right; font-family:monospace; font-size:12px; }
+  .trunc { max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .insight { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:6px; padding:12px 16px; margin-bottom:16px; font-size:13px; line-height:1.6; }
+  .insight strong { color:var(--accent); }
+
+  .loading { text-align:center; padding:48px; color:var(--dim); }
+  .error { text-align:center; padding:48px; color:var(--red); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>The Science-Attention Gap <span>| Where research and public awareness diverge</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/trends" id="trends-link">Science Trends</a>
+  </div>
+</div>
+<div class="container" id="content">
+  <div class="loading" id="loading">Loading attention gap data...</div>
+</div>
+
+<script>
+const TK='__TOKEN__';
+function ap(url){const u=new URL(url,location.origin);if(TK)u.searchParams.set('token',TK);return u.toString();}
+document.getElementById('home-link').href=ap('/');
+document.getElementById('trends-link').href=ap('/trends');
+
+async function load() {
+  try {
+    const r = await fetch(ap('/api/attention-gap/summary'));
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    render(d);
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="error">Failed to load: ${e.message}<br><br><a href="${ap('/')}">Back to dashboard</a></div>`;
+  }
+}
+
+function fmt(n) { return n >= 1000 ? n.toLocaleString() : n; }
+function pct(n) { return (n * 100).toFixed(1) + '%'; }
+
+function render(d) {
+  const c = document.getElementById('content');
+  const lg = d.levelGapStats;
+
+  let html = '';
+
+  // Stats row
+  html += `<div class="stats-row">
+    <div class="stat-card"><div class="label">Topics Analyzed</div><div class="value neutral">${fmt(d.topicsAnalyzed)}</div><div class="note">${fmt(d.topicsFiltered)} after quality filtering</div></div>
+    <div class="stat-card"><div class="label">Spearman rho</div><div class="value neutral">${d.spearmanRho.toFixed(3)}</div><div class="note">Science-attention correlation</div></div>
+    <div class="stat-card"><div class="label">Mean Trend Gap</div><div class="value under">+${d.meanTrendGap.toFixed(1)}pp</div><div class="note">Science outpacing attention</div></div>
+    <div class="stat-card"><div class="label">Under-covered</div><div class="value under">${lg.positive_count || '~1,300'}</div><div class="note">More science than attention</div></div>
+    <div class="stat-card"><div class="label">High-attention</div><div class="value over">${lg.negative_count || '~1,200'}</div><div class="note">More attention than science</div></div>
+  </div>`;
+
+  // Core insight
+  html += `<div class="insight"><strong>Core finding:</strong> Scientific research output and public attention (Wikipedia pageviews) are nearly uncorrelated (Spearman rho = ${d.spearmanRho.toFixed(3)}). What scientists study and what the public reads about are largely independent phenomena. The gap is widening: science output grows +${d.meanTrendGap.toFixed(1)} percentage points faster than public attention on average.</div>`;
+
+  // Field gap chart
+  html += `<div class="section"><h2>Attention Gap by Field <span>Mean level gap across all topics in each field</span></h2>`;
+  html += `<div class="field-chart">`;
+  const maxAbs = Math.max(...d.fieldGaps.map(f => Math.abs(f.mean)), 0.4);
+  for (const f of d.fieldGaps) {
+    const pctPos = (f.mean / maxAbs) * 50;
+    const isPos = f.mean >= 0;
+    const barLeft = isPos ? 50 : 50 + pctPos;
+    const barWidth = Math.abs(pctPos);
+    const cls = isPos ? 'positive' : 'negative';
+    const valCls = isPos ? 'gap-pos' : 'gap-neg';
+    html += `<div class="field-bar" title="${f.fullName}: ${f.mean >= 0 ? '+' : ''}${f.mean.toFixed(3)} (${f.count} topics)">
+      <div class="fname">${f.name}</div>
+      <div class="bar-container">
+        <div class="bar-bg"></div>
+        <div class="bar-center"></div>
+        <div class="bar-fill ${cls}" style="left:${barLeft}%;width:${barWidth}%"></div>
+      </div>
+      <div class="val ${valCls}">${f.mean >= 0 ? '+' : ''}${f.mean.toFixed(3)}</div>
+      <div class="cnt">${f.count}</div>
+    </div>`;
+  }
+  html += `</div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px;padding:0 188px 0 0"><span style="color:var(--orange)">&larr; High-attention (public interest exceeds science)</span><span style="color:var(--green)">Under-covered (science exceeds attention) &rarr;</span></div>`;
+  html += `</div>`;
+
+  // Under-covered table
+  html += `<div class="section"><h2>Top 10 Under-Covered Topics <span>High science output, low public attention</span></h2>`;
+  html += `<table><thead><tr><th>#</th><th>Topic</th><th>Field</th><th>Wikipedia</th><th class="num">Pubs 2024</th><th class="num">Views/mo</th><th class="num">Gap</th></tr></thead><tbody>`;
+  d.underCovered.forEach((t, i) => {
+    html += `<tr><td>${i+1}</td><td class="trunc">${t.topic}</td><td class="trunc">${t.field}</td><td class="trunc">${t.wiki}</td><td class="num">${fmt(t.pubs)}</td><td class="num">${fmt(t.views)}</td><td class="num gap-pos">+${t.gap.toFixed(3)}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // High-attention table
+  html += `<div class="section"><h2>Top 10 High-Attention Topics <span>Public interest exceeds scientific output</span></h2>`;
+  html += `<table><thead><tr><th>#</th><th>Topic</th><th>Field</th><th>Wikipedia</th><th class="num">Pubs 2024</th><th class="num">Views/mo</th><th class="num">Gap</th></tr></thead><tbody>`;
+  d.highAttention.forEach((t, i) => {
+    html += `<tr><td>${i+1}</td><td class="trunc">${t.topic}</td><td class="trunc">${t.field}</td><td class="trunc">${t.wiki}</td><td class="num">${fmt(t.pubs)}</td><td class="num">${fmt(t.views)}</td><td class="num gap-neg">${t.gap.toFixed(3)}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // Trend gap table
+  html += `<div class="section"><h2>Top 10 Trend Gaps <span>Where science is accelerating fastest beyond public awareness</span></h2>`;
+  html += `<table><thead><tr><th>#</th><th>Topic</th><th class="num">Science CAGR</th><th class="num">Pageview CAGR</th><th class="num">Trend Gap</th></tr></thead><tbody>`;
+  d.trendSciOutpacing.forEach((t, i) => {
+    html += `<tr><td>${i+1}</td><td class="trunc">${t.topic}</td><td class="num">${t.sciCagr ? pct(t.sciCagr) : 'N/A'}</td><td class="num">${t.pvCagr ? pct(t.pvCagr) : 'N/A'}</td><td class="num gap-pos">+${t.trendGap.toFixed(1)}pp</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // Link to full report
+  html += `<div class="insight" style="border-left-color:var(--purple)"><strong>Full report:</strong> The complete analysis with methodology, profiles, extended rankings, and data quality assessment is available at <a href="${ap('/api/file?path=/output/research/attention-gap-analysis/report.md')}" target="_blank">/output/research/attention-gap-analysis/report.md</a> via the dashboard file viewer.</div>`;
+
+  c.innerHTML = html;
+}
+
+load();
+</script>
+</body>
+</html>

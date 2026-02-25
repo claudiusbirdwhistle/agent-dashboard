@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Cycle Analysis — 277 Years of Sunspot Data</title>
+<style>
+  :root { --bg:#0d1117; --surface:#161b22; --border:#30363d; --text:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149; --orange:#d29922; --purple:#bc8cff; --cyan:#39d2c0; --yellow:#f0c000; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  .header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .header h1 { font-size:18px; font-weight:600; }
+  .header h1 span { color:var(--dim); font-weight:400; }
+  .header-nav { display:flex; gap:8px; }
+  .header-nav a { font-size:12px; padding:4px 10px; border:1px solid var(--border); border-radius:6px; }
+
+  .container { max-width:1200px; margin:0 auto; padding:24px; }
+
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .stat-card .label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .stat-card .value { font-size:24px; font-weight:600; }
+  .stat-card .value.solar { color:var(--yellow); }
+  .stat-card .value.accent { color:var(--accent); }
+  .stat-card .value.warn { color:var(--orange); }
+  .stat-card .value.good { color:var(--green); }
+  .stat-card .value.bad { color:var(--red); }
+  .stat-card .note { font-size:11px; color:var(--dim); margin-top:4px; }
+
+  .section { margin-bottom:32px; }
+  .section h2 { font-size:16px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .section h2 span { color:var(--dim); font-weight:400; font-size:13px; }
+
+  .insight { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:6px; padding:12px 16px; margin-bottom:16px; font-size:13px; line-height:1.6; }
+  .insight strong { color:var(--accent); }
+  .insight .solar-strong { color:var(--yellow); }
+
+  .tabs { display:flex; gap:4px; margin-bottom:16px; }
+  .tab-btn { background:var(--surface); border:1px solid var(--border); color:var(--dim); padding:8px 16px; border-radius:6px 6px 0 0; cursor:pointer; font-size:13px; transition:0.15s; }
+  .tab-btn:hover { color:var(--text); }
+  .tab-btn.active { background:var(--bg); color:var(--accent); border-bottom-color:var(--bg); }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:8px 12px; background:var(--surface); border:1px solid var(--border); font-weight:600; color:var(--dim); text-transform:uppercase; font-size:11px; letter-spacing:0.3px; position:sticky; top:0; }
+  td { padding:8px 12px; border:1px solid var(--border); }
+  tr:hover td { background:rgba(88,166,255,0.05); }
+  .table-wrap { max-height:500px; overflow-y:auto; border-radius:6px; border:1px solid var(--border); }
+  .table-wrap table { border:none; }
+  .table-wrap th, .table-wrap td { border-left:none; border-right:none; }
+  .table-wrap tr:first-child th { border-top:none; }
+
+  .cycle-bar { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+  .cycle-bar .cname { width:48px; font-size:12px; text-align:right; color:var(--dim); flex-shrink:0; }
+  .cycle-bar .bar-wrap { flex:1; position:relative; height:22px; }
+  .cycle-bar .bar { position:absolute; height:100%; border-radius:4px; display:flex; align-items:center; padding:0 8px; font-size:11px; font-weight:600; transition:0.3s; }
+  .cycle-bar .cval { font-size:12px; color:var(--text); margin-left:8px; flex-shrink:0; width:60px; }
+
+  .spectral-method { display:flex; align-items:center; gap:12px; padding:8px 12px; background:var(--surface); border:1px solid var(--border); border-radius:6px; margin-bottom:8px; }
+  .spectral-method .method-name { width:120px; font-size:12px; color:var(--dim); flex-shrink:0; }
+  .spectral-method .method-period { font-size:18px; font-weight:600; color:var(--yellow); }
+  .spectral-method .method-unit { font-size:12px; color:var(--dim); margin-left:4px; }
+
+  .chart-area { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .chart-area canvas { width:100%; height:180px; }
+
+  .loading { text-align:center; padding:48px; color:var(--dim); }
+  .error { text-align:center; padding:48px; color:var(--red); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Solar Cycle Analysis <span>277 Years of Sunspot Data (1749–2026)</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/sea-level" id="sl-link">Sea Level</a>
+    <a href="/climate" id="climate-link">Climate</a>
+    <a href="/covid-attention" id="covid-link">COVID</a>
+  </div>
+</div>
+
+<div class="container" id="content">
+  <div class="loading" id="loading">Loading solar cycle data...</div>
+</div>
+
+<script>
+const TK='__TOKEN__';
+function ap(url){const u=new URL(url,location.origin);if(TK)u.searchParams.set('token',TK);return u.toString();}
+document.getElementById('home-link').href=ap('/');
+document.getElementById('sl-link').href=ap('/sea-level');
+document.getElementById('climate-link').href=ap('/climate');
+document.getElementById('covid-link').href=ap('/covid-attention');
+
+async function load() {
+  try {
+    const url = new URL('/api/solar-cycles/summary', location.origin);
+    if (TK) url.searchParams.set('token', TK);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(await res.text());
+    const d = await res.json();
+    render(d);
+  } catch(e) {
+    document.getElementById('loading').className = 'error';
+    document.getElementById('loading').textContent = 'Error: ' + e.message;
+  }
+}
+
+function fmt(v, dec=1) { return v == null ? '—' : Number(v).toFixed(dec); }
+function sign(v) { return v >= 0 ? '+' + fmt(v) : fmt(v); }
+
+function render(d) {
+  const c = document.getElementById('content');
+  const sc = d.schwabe_cycle;
+  const gl = d.gleissberg;
+  const hale = d.hale_cycle;
+  const sc25 = d.sc25;
+  const wald = d.waldmeier_effect;
+  const stats = d.cycle_stats;
+  const cycles = d.cycles || [];
+
+  let h = '';
+
+  // Key stats row
+  h += '<div class="stats-row">';
+  h += statCard('Schwabe Cycle', fmt(sc.period_yr, 2) + ' yr', 'solar', '± ' + fmt(sc.std_yr, 2) + ' yr (4-method consensus)');
+  h += statCard('Hale Cycle', fmt(hale.period_yr, 1) + ' yr', 'accent', 'ACF = ' + fmt(hale.acf_value, 3));
+  h += statCard('Gleissberg', '~' + fmt(gl.period_yr, 0) + ' yr', 'warn', 'p = ' + fmt(gl.p_value, 4) + ', R² = ' + fmt(gl.r_squared, 3));
+  h += statCard('SC25 Peak', fmt(sc25.peak_monthly_ssn, 0) + ' SSN', 'solar', fmt((sc25.ratio - 1) * 100, 0) + '% above NOAA prediction');
+  h += statCard('Daily Peak', fmt(sc25.daily_peak, 0) + ' SSN', 'bad', fmt(sc25.pct_above_100, 0) + '% of days > 100');
+  h += statCard('Waldmeier r', fmt(wald.r, 3), 'good', 'p = ' + Number(wald.p).toExponential(1));
+  h += '</div>';
+
+  // Insight
+  h += '<div class="insight">';
+  h += '<strong>Key Finding:</strong> Solar Cycle 25 peaked at <span class="solar-strong">' + fmt(sc25.peak_monthly_ssn, 0) + ' SSN</span> (monthly) in mid-2024 — ';
+  h += '<span class="solar-strong">' + fmt((sc25.ratio - 1) * 100, 0) + '% above</span> NOAA\'s official prediction of ' + fmt(sc25.predicted_ssn, 0) + '. ';
+  h += 'The smoothed peak of ' + fmt(sc25.peak_smoothed_ssn, 0) + ' represents a dramatic recovery from the historically weak SC24. ';
+  h += 'The Gleissberg ~' + fmt(gl.period_yr, 0) + '-year modulation is currently in a <strong>' + gl.current_phase + '</strong> phase.';
+  h += '</div>';
+
+  // Spectral methods comparison
+  h += '<div class="section"><h2>Spectral Methods <span>4 independent methods confirm the ~11-year cycle</span></h2>';
+  const methods = sc.methods || {};
+  for (const [name, period] of Object.entries(methods)) {
+    h += '<div class="spectral-method">';
+    h += '<div class="method-name">' + name + '</div>';
+    h += '<div class="method-period">' + fmt(period, 2) + '<span class="method-unit"> yr</span></div>';
+    h += '</div>';
+  }
+  h += '</div>';
+
+  // SC25 Prediction Assessment
+  h += '<div class="section"><h2>SC25 Prediction Assessment <span>Observed vs NOAA predictions</span></h2>';
+  h += '<div class="stats-row">';
+  h += statCard('Monthly Peak', fmt(sc25.peak_monthly_ssn, 0) + ' SSN', 'solar', 'Observed (mid-' + Math.round(sc25.peak_time) + ')');
+  h += statCard('Smoothed Peak', fmt(sc25.peak_smoothed_ssn, 0) + ' SSN', 'warn', 'vs predicted ' + fmt(sc25.predicted_ssn, 0));
+  h += statCard('Prediction Bias', sign(sc25.bias) + ' SSN', sc25.bias > 0 ? 'bad' : 'good', 'Overlap period');
+  h += statCard('RMSE', fmt(sc25.rmse, 1) + ' SSN', 'accent', 'Prediction error');
+  h += '</div>';
+  h += '</div>';
+
+  // Cycle catalog
+  h += '<div class="section"><h2>Solar Cycle Catalog <span>SC1–SC25 (1755–2026)</span></h2>';
+
+  // Tabs for chart vs table
+  h += '<div class="tabs">';
+  h += '<button class="tab-btn active" onclick="showTab(\'chart\')">Amplitude Chart</button>';
+  h += '<button class="tab-btn" onclick="showTab(\'table\')">Data Table</button>';
+  h += '</div>';
+
+  // Chart tab
+  h += '<div class="tab-content active" id="tab-chart">';
+  const maxAmp = Math.max(...cycles.map(c => c.amplitude || 0));
+  for (const cyc of cycles) {
+    const pct = ((cyc.amplitude || 0) / maxAmp * 100).toFixed(1);
+    // Color based on amplitude
+    let color;
+    if (cyc.amplitude > 220) color = 'var(--red)';
+    else if (cyc.amplitude > 170) color = 'var(--yellow)';
+    else if (cyc.amplitude > 120) color = 'var(--accent)';
+    else color = 'var(--cyan)';
+    h += '<div class="cycle-bar">';
+    h += '<div class="cname">SC' + cyc.number + '</div>';
+    h += '<div class="bar-wrap"><div class="bar" style="width:' + pct + '%;background:' + color + ';opacity:0.8;"></div></div>';
+    h += '<div class="cval">' + fmt(cyc.amplitude, 0) + ' SSN</div>';
+    h += '</div>';
+  }
+  h += '</div>';
+
+  // Table tab
+  h += '<div class="tab-content" id="tab-table">';
+  h += '<div class="table-wrap"><table>';
+  h += '<tr><th>Cycle</th><th>Min Year</th><th>Max Year</th><th>Period (yr)</th><th>Amplitude</th><th>Rise (yr)</th><th>Mean SSN</th></tr>';
+  for (const cyc of cycles) {
+    h += '<tr>';
+    h += '<td>SC' + cyc.number + '</td>';
+    h += '<td>' + fmt(cyc.min_year, 1) + '</td>';
+    h += '<td>' + fmt(cyc.max_year, 1) + '</td>';
+    h += '<td>' + (cyc.period ? fmt(cyc.period, 2) : '—') + '</td>';
+    h += '<td style="font-weight:600;color:' + (cyc.amplitude > 200 ? 'var(--yellow)' : 'var(--text)') + '">' + fmt(cyc.amplitude, 0) + '</td>';
+    h += '<td>' + fmt(cyc.rise_yr, 2) + '</td>';
+    h += '<td>' + fmt(cyc.mean_ssn, 0) + '</td>';
+    h += '</tr>';
+  }
+  h += '</table></div>';
+  h += '</div>';
+  h += '</div>';
+
+  // Cycle statistics
+  h += '<div class="section"><h2>Cycle Statistics <span>24 completed cycles</span></h2>';
+  h += '<div class="stats-row">';
+  h += statCard('Mean Period', fmt(stats.mean_period, 2) + ' yr', 'accent', 'Range: ' + fmt(stats.period_range[0], 1) + '–' + fmt(stats.period_range[1], 1) + ' yr');
+  h += statCard('Mean Amplitude', fmt(stats.mean_amplitude, 0) + ' SSN', 'solar', 'Range: ' + fmt(stats.amplitude_range[0], 0) + '–' + fmt(stats.amplitude_range[1], 0));
+  h += statCard('Gleissberg Phase', gl.current_phase, 'warn', 'Next few decades: weaker cycles?');
+  h += statCard('Data Span', d.data_summary.total_months + ' months', 'accent', '1749–2026');
+  h += '</div>';
+  h += '</div>';
+
+  // Report link
+  h += '<div class="section">';
+  h += '<div class="insight">';
+  h += '<strong>Full Report:</strong> <a href="' + ap('/api/file?path=/output/research/solar-cycles/report.md') + '" target="_blank">';
+  h += '/output/research/solar-cycles/report.md</a> — detailed analysis with methodology, spectral tables, and limitations.';
+  h += '</div>';
+  h += '</div>';
+
+  c.innerHTML = h;
+}
+
+function statCard(label, value, cls, note) {
+  return '<div class="stat-card"><div class="label">' + label + '</div><div class="value ' + cls + '">' + value + '</div>' + (note ? '<div class="note">' + note + '</div>' : '') + '</div>';
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+load();
+</script>
+</body>
+</html>

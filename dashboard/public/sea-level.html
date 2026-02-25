@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sea Level Rise — US Coastal Stations</title>
+<style>
+  :root { --bg:#0d1117; --surface:#161b22; --border:#30363d; --text:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149; --orange:#d29922; --purple:#bc8cff; --cyan:#39d2c0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  .header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .header h1 { font-size:18px; font-weight:600; }
+  .header h1 span { color:var(--dim); font-weight:400; }
+  .header-nav { display:flex; gap:8px; }
+  .header-nav a { font-size:12px; padding:4px 10px; border:1px solid var(--border); border-radius:6px; }
+
+  .container { max-width:1200px; margin:0 auto; padding:24px; }
+
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .stat-card .label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .stat-card .value { font-size:24px; font-weight:600; }
+  .stat-card .value.rise { color:var(--red); }
+  .stat-card .value.fall { color:var(--cyan); }
+  .stat-card .value.neutral { color:var(--accent); }
+  .stat-card .value.warn { color:var(--orange); }
+  .stat-card .note { font-size:11px; color:var(--dim); margin-top:4px; }
+
+  .section { margin-bottom:32px; }
+  .section h2 { font-size:16px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .section h2 span { color:var(--dim); font-weight:400; font-size:13px; }
+
+  .insight { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:6px; padding:12px 16px; margin-bottom:16px; font-size:13px; line-height:1.6; }
+  .insight strong { color:var(--accent); }
+
+  .tabs { display:flex; gap:4px; margin-bottom:16px; }
+  .tab-btn { background:var(--surface); border:1px solid var(--border); color:var(--dim); padding:8px 16px; border-radius:6px 6px 0 0; cursor:pointer; font-size:13px; transition:0.15s; }
+  .tab-btn:hover { color:var(--text); }
+  .tab-btn.active { background:var(--bg); color:var(--accent); border-bottom-color:var(--bg); }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:8px 12px; background:var(--surface); border:1px solid var(--border); font-weight:600; color:var(--dim); text-transform:uppercase; font-size:11px; letter-spacing:0.3px; position:sticky; top:0; }
+  td { padding:8px 12px; border:1px solid var(--border); }
+  tr:hover td { background:rgba(88,166,255,0.05); }
+  .table-wrap { max-height:500px; overflow-y:auto; border-radius:6px; border:1px solid var(--border); }
+  .table-wrap table { border:none; }
+  .table-wrap th, .table-wrap td { border-left:none; border-right:none; }
+  .table-wrap tr:first-child th { border-top:none; }
+
+  .region-bar { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .region-bar .rname { width:160px; font-size:12px; text-align:right; color:var(--dim); flex-shrink:0; }
+  .region-bar .bar-wrap { flex:1; position:relative; height:24px; }
+  .region-bar .bar { position:absolute; height:100%; border-radius:4px; display:flex; align-items:center; padding:0 8px; font-size:11px; font-weight:600; transition:0.3s; }
+  .region-bar .rval { font-size:12px; color:var(--text); margin-left:8px; flex-shrink:0; width:80px; }
+
+  .accel-bars { display:flex; flex-direction:column; gap:6px; }
+  .accel-row { display:flex; align-items:center; gap:8px; }
+  .accel-row .pname { width:100px; font-size:12px; text-align:right; color:var(--dim); flex-shrink:0; }
+  .accel-row .bar-wrap { flex:1; display:flex; align-items:center; height:20px; }
+  .accel-row .bar { height:100%; border-radius:3px; min-width:2px; }
+  .accel-row .aval { font-size:12px; margin-left:8px; flex-shrink:0; }
+
+  .loading { text-align:center; padding:48px; color:var(--dim); }
+  .error { text-align:center; padding:48px; color:var(--red); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Sea Level Rise <span>US Coastal Stations</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/climate" id="climate-link">Climate</a>
+    <a href="/covid-attention" id="covid-link">COVID</a>
+    <a href="/attention-gap" id="gap-link">Attention Gap</a>
+  </div>
+</div>
+
+<div class="container">
+  <div id="loading" class="loading">Loading sea level data...</div>
+  <div id="error" class="error" style="display:none"></div>
+  <div id="content" style="display:none">
+
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="insight" id="key-insight"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="regional">Regional Comparison</button>
+      <button class="tab-btn" data-tab="stations">Station Rankings</button>
+      <button class="tab-btn" data-tab="acceleration">Acceleration</button>
+      <button class="tab-btn" data-tab="periods">Multi-Period</button>
+    </div>
+
+    <div class="tab-content active" id="tab-regional">
+      <div class="section">
+        <h2>Regional Mean Sea Level Trends <span>(mm/year)</span></h2>
+        <div id="region-chart" style="margin-bottom:24px;"></div>
+        <div class="table-wrap" id="region-table-wrap"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-stations">
+      <div class="section">
+        <h2>Station Rankings <span>by linear trend (mm/year)</span></h2>
+        <div style="margin-bottom:12px; display:flex; gap:12px; align-items:center;">
+          <label style="font-size:12px; color:var(--dim);">Show:</label>
+          <select id="station-filter" style="background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:4px 8px; font-size:12px;">
+            <option value="all">All Stations</option>
+            <option value="rising">Rising Only</option>
+            <option value="falling">Falling Only</option>
+            <option value="significant">Significant Only</option>
+          </select>
+          <label style="font-size:12px; color:var(--dim);">Region:</label>
+          <select id="region-filter" style="background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:4px 8px; font-size:12px;">
+            <option value="all">All Regions</option>
+          </select>
+        </div>
+        <div class="table-wrap" id="station-table-wrap"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-acceleration">
+      <div class="section">
+        <h2>Is Sea Level Rise Accelerating?</h2>
+        <div class="insight" id="accel-insight"></div>
+        <h2 style="margin-top:24px;">Regional Acceleration <span>(mm/yr&sup2;)</span></h2>
+        <div id="accel-chart" style="margin-bottom:24px;"></div>
+        <h2 style="margin-top:24px;">Top 10 Most Accelerating Stations</h2>
+        <div class="table-wrap" id="accel-table-wrap"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-periods">
+      <div class="section">
+        <h2>Multi-Period Rate Comparison <span>(regional means, mm/year)</span></h2>
+        <div id="period-chart"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const TK='__TOKEN__';
+function ap(url){const u=new URL(url,location.origin);if(TK)u.searchParams.set('token',TK);return u.toString();}
+document.getElementById('home-link').href=ap('/');
+document.getElementById('climate-link').href=ap('/climate');
+document.getElementById('covid-link').href=ap('/covid-attention');
+document.getElementById('gap-link').href=ap('/attention-gap');
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  };
+});
+
+async function loadData() {
+  try {
+    const url = ap('/api/sea-level/summary');
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+    const data = await resp.json();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    render(data);
+  } catch (e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'Failed to load data: ' + e.message;
+  }
+}
+
+function render(d) {
+  // Stats cards
+  const statsRow = document.getElementById('stats-row');
+  const cards = [
+    { label: 'Stations Analyzed', value: d.stations_analyzed, cls: 'neutral' },
+    { label: 'Rising', value: d.stations_rising, cls: 'rise', note: `${d.stations_falling} falling` },
+    { label: 'Mean Rise Rate', value: d.mean_rise_rate_mm_yr.toFixed(1) + ' mm/yr', cls: 'rise', note: (d.mean_rise_rate_mm_yr * 100).toFixed(0) + ' mm/century' },
+    { label: '% Significant', value: d.pct_significant.toFixed(0) + '%', cls: 'neutral' },
+    { label: '% Accelerating', value: d.pct_accelerating.toFixed(0) + '%', cls: 'warn', note: 'quadratic term p<0.05' },
+    { label: 'Fastest Rising', value: d.fastest_rising.rate_mm_yr.toFixed(1), cls: 'rise', note: d.fastest_rising.name },
+  ];
+  statsRow.innerHTML = cards.map(c =>
+    `<div class="stat-card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div>${c.note ? `<div class="note">${c.note}</div>` : ''}</div>`
+  ).join('');
+
+  // Key insight
+  document.getElementById('key-insight').innerHTML =
+    `<strong>Key finding:</strong> Sea level is rising at <strong>${d.mean_rise_rate_mm_yr.toFixed(1)} mm/year</strong> on average across ${d.stations_rising} US stations. ` +
+    `Post-1990 rates (<strong>${d.post_1990_rate} mm/yr</strong>) have nearly doubled compared to pre-1990 (<strong>${d.pre_1990_rate} mm/yr</strong>). ` +
+    `The Gulf Coast is rising fastest (+${(d.regional_mean_rates?.Gulf || 5.2).toFixed(1)} mm/yr), amplified by land subsidence. ` +
+    `Alaska shows falling sea levels (${(d.regional_mean_rates?.Alaska || -3.6).toFixed(1)} mm/yr) due to post-glacial rebound.`;
+
+  renderRegional(d);
+  renderStations(d);
+  renderAcceleration(d);
+  renderPeriods(d);
+}
+
+function renderRegional(d) {
+  const stats = d.regionalStats;
+  const regions = Object.keys(stats).sort((a, b) => stats[b].mean_slope_mm_yr - stats[a].mean_slope_mm_yr);
+
+  // Find max absolute rate for scale
+  const maxAbs = Math.max(...regions.map(r => Math.abs(stats[r].mean_slope_mm_yr)));
+
+  const chart = document.getElementById('region-chart');
+  const midPx = 50; // percent from left for zero line
+  chart.innerHTML = regions.map(r => {
+    const s = stats[r];
+    const rate = s.mean_slope_mm_yr;
+    const pct = Math.abs(rate) / maxAbs * 45;
+    const color = rate > 0 ? 'var(--red)' : 'var(--cyan)';
+    const left = rate >= 0 ? midPx : midPx - pct;
+    return `<div class="region-bar">
+      <div class="rname">${r} (${s.n_stations})</div>
+      <div class="bar-wrap" style="position:relative;">
+        <div style="position:absolute;left:${midPx}%;top:0;bottom:0;width:1px;background:var(--border);"></div>
+        <div class="bar" style="left:${left}%;width:${pct}%;background:${color};">${rate > 0 ? '+' : ''}${rate.toFixed(1)}</div>
+      </div>
+      <div class="rval">${s.pct_significant.toFixed(0)}% sig.</div>
+    </div>`;
+  }).join('');
+
+  // Regional table
+  const wrap = document.getElementById('region-table-wrap');
+  wrap.innerHTML = `<table>
+    <tr><th>Region</th><th>Stations</th><th>Mean (mm/yr)</th><th>Median</th><th>Std Dev</th><th>% Significant</th></tr>
+    ${regions.map(r => {
+      const s = stats[r];
+      return `<tr><td>${r}</td><td>${s.n_stations}</td><td style="color:${s.mean_slope_mm_yr > 0 ? 'var(--red)' : 'var(--cyan)'}">${s.mean_slope_mm_yr > 0 ? '+' : ''}${s.mean_slope_mm_yr.toFixed(2)}</td><td>${s.median_slope_mm_yr > 0 ? '+' : ''}${s.median_slope_mm_yr.toFixed(2)}</td><td>${s.std_slope_mm_yr.toFixed(2)}</td><td>${s.pct_significant.toFixed(0)}%</td></tr>`;
+    }).join('')}
+  </table>`;
+}
+
+function renderStations(d) {
+  const ranking = d.stationRanking;
+
+  // Populate region filter
+  const regionFilter = document.getElementById('region-filter');
+  const regions = [...new Set(ranking.map(r => r.region))].sort();
+  regions.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r;
+    opt.textContent = r;
+    regionFilter.appendChild(opt);
+  });
+
+  function updateTable() {
+    const filter = document.getElementById('station-filter').value;
+    const regionVal = document.getElementById('region-filter').value;
+    let data = ranking;
+    if (filter === 'rising') data = data.filter(r => r.rate_mm_yr > 0);
+    else if (filter === 'falling') data = data.filter(r => r.rate_mm_yr < 0);
+    else if (filter === 'significant') data = data.filter(r => r.mk_significant);
+    if (regionVal !== 'all') data = data.filter(r => r.region === regionVal);
+
+    const wrap = document.getElementById('station-table-wrap');
+    wrap.innerHTML = `<table>
+      <tr><th>#</th><th>Station</th><th>Region</th><th>Rate (mm/yr)</th><th>95% CI</th><th>Record</th><th>Years</th><th>Total Change</th><th>Sig?</th></tr>
+      ${data.map((r, i) => {
+        const color = r.rate_mm_yr > 0 ? 'var(--red)' : 'var(--cyan)';
+        const sigIcon = r.mk_significant ? '&#10003;' : '&#10007;';
+        const sigColor = r.mk_significant ? 'var(--green)' : 'var(--dim)';
+        return `<tr>
+          <td>${i + 1}</td>
+          <td>${r.name}</td>
+          <td>${r.region}</td>
+          <td style="color:${color};font-weight:600">${r.rate_mm_yr > 0 ? '+' : ''}${r.rate_mm_yr.toFixed(2)}</td>
+          <td style="font-size:11px;color:var(--dim)">[${r.ci_lower.toFixed(1)}, ${r.ci_upper.toFixed(1)}]</td>
+          <td style="font-size:12px">${r.start_year}–${r.end_year}</td>
+          <td>${r.n_years}</td>
+          <td style="color:${color}">${r.total_change_mm > 0 ? '+' : ''}${r.total_change_mm.toFixed(0)} mm</td>
+          <td style="color:${sigColor}">${sigIcon}</td>
+        </tr>`;
+      }).join('')}
+    </table>`;
+  }
+
+  document.getElementById('station-filter').onchange = updateTable;
+  document.getElementById('region-filter').onchange = updateTable;
+  updateTable();
+}
+
+function renderAcceleration(d) {
+  const accel = d.accelSummary;
+  document.getElementById('accel-insight').innerHTML =
+    `<strong>Yes, sea level rise is accelerating.</strong> ` +
+    `${accel.accelerating_significant} of ${accel.total_stations} stations (${accel.pct_significant.toFixed(0)}%) show statistically significant acceleration (quadratic fit). ` +
+    `Mean acceleration: <strong>${accel.mean_accel_all > 0 ? '+' : ''}${accel.mean_accel_all.toFixed(3)} mm/yr&sup2;</strong> ` +
+    `(the rate of rise increases by ~${(accel.mean_accel_all * 10).toFixed(1)} mm/yr per decade). ` +
+    `Pre-1990 mean rate was +${d.pre_1990_rate} mm/yr; post-1990 is +${d.post_1990_rate} mm/yr.`;
+
+  // Regional acceleration chart
+  const ra = d.regionalAccel;
+  const raRegions = Object.keys(ra).sort((a, b) => (ra[b].mean_accel_mm_yr2 || 0) - (ra[a].mean_accel_mm_yr2 || 0));
+  const maxAccel = Math.max(...raRegions.map(r => Math.abs(ra[r].mean_accel_mm_yr2 || 0)));
+
+  document.getElementById('accel-chart').innerHTML = `<div class="accel-bars">
+    ${raRegions.map(r => {
+      const a = ra[r];
+      const val = a.mean_accel_mm_yr2 || 0;
+      const pct = Math.min(Math.abs(val) / maxAccel * 80, 95);
+      const color = val > 0 ? 'var(--red)' : 'var(--cyan)';
+      const sign = val > 0 ? '+' : '';
+      return `<div class="accel-row">
+        <div class="pname">${r}</div>
+        <div class="bar-wrap"><div class="bar" style="width:${pct}%;background:${color};border-radius:3px;"></div></div>
+        <div class="aval" style="color:${color}">${sign}${val.toFixed(4)}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  // Top accelerating table
+  const topA = d.topAccelerating;
+  document.getElementById('accel-table-wrap').innerHTML = `<table>
+    <tr><th>#</th><th>Station</th><th>Region</th><th>Acceleration (mm/yr&sup2;)</th><th>p-value</th><th>Record</th></tr>
+    ${topA.map((r, i) => {
+      const sig = r.p < 0.05;
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${r.name}</td>
+        <td>${r.region}</td>
+        <td style="color:var(--red);font-weight:600">${r.accel > 0 ? '+' : ''}${r.accel.toFixed(4)}${sig ? ' *' : ''}</td>
+        <td style="color:${sig ? 'var(--green)' : 'var(--dim)'}">${r.p.toFixed(4)}</td>
+        <td>${r.span}</td>
+      </tr>`;
+    }).join('')}
+  </table>`;
+}
+
+function renderPeriods(d) {
+  const pc = d.periodComparison;
+  const periods = ['full', 'pre_1990', 'post_1990', 'post_2000'];
+  const periodLabels = { full: 'Full Record', pre_1990: 'Pre-1990', post_1990: 'Post-1990', post_2000: 'Post-2000' };
+
+  // Get all regions present
+  const allRegions = new Set();
+  Object.values(pc).forEach(p => Object.keys(p).forEach(r => allRegions.add(r)));
+  const regionList = [...allRegions].sort();
+
+  // Colors for periods
+  const periodColors = { full: 'var(--accent)', pre_1990: 'var(--dim)', post_1990: 'var(--orange)', post_2000: 'var(--red)' };
+
+  const chart = document.getElementById('period-chart');
+  chart.innerHTML = `
+    <div style="display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
+      ${periods.map(p => `<div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--dim);">
+        <div style="width:12px;height:12px;border-radius:2px;background:${periodColors[p]};"></div>${periodLabels[p]}
+      </div>`).join('')}
+    </div>
+    <div class="table-wrap"><table>
+      <tr><th>Region</th>${periods.map(p => `<th>${periodLabels[p]}</th>`).join('')}<th>Change (Pre→Post 1990)</th></tr>
+      ${regionList.map(r => {
+        const cells = periods.map(p => {
+          const val = pc[p]?.[r]?.mean_mm_yr;
+          if (val == null) return '<td style="color:var(--dim)">—</td>';
+          const color = val > 0 ? 'var(--red)' : val < 0 ? 'var(--cyan)' : 'var(--text)';
+          return `<td style="color:${color};font-weight:600">${val > 0 ? '+' : ''}${val.toFixed(2)}</td>`;
+        }).join('');
+        const pre = pc.pre_1990?.[r]?.mean_mm_yr;
+        const post = pc.post_1990?.[r]?.mean_mm_yr;
+        let changeCell = '<td style="color:var(--dim)">—</td>';
+        if (pre != null && post != null) {
+          const diff = post - pre;
+          const color = diff > 0 ? 'var(--red)' : 'var(--cyan)';
+          changeCell = `<td style="color:${color};font-weight:600">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</td>`;
+        }
+        return `<tr><td>${r}</td>${cells}${changeCell}</tr>`;
+      }).join('')}
+    </table></div>
+  `;
+}
+
+loadData();
+</script>
+</body>
+</html>

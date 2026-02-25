@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exoplanet Census — 6,107 Confirmed Worlds</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --purple: #bc8cff; --pink: #f778ba; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header h1 span { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .header-nav { display: flex; gap: 8px; }
+  .header-nav a { font-size: 12px; color: var(--accent); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; }
+  .header-nav a:hover { background: rgba(88,166,255,0.1); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .loading { text-align: center; padding: 60px; color: var(--dim); }
+  .error { text-align: center; padding: 60px; color: var(--red); }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-card .value { font-size: 24px; font-weight: 600; color: var(--accent); }
+  .stat-card .sub { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-header { padding: 14px 18px; font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .section-header:hover { background: rgba(88,166,255,0.04); }
+  .section-header .arrow { color: var(--dim); transition: transform 0.2s; }
+  .section-header.open .arrow { transform: rotate(90deg); }
+  .section-body { padding: 18px; display: none; }
+  .section-body.open { display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .finding { padding: 10px 14px; background: rgba(88,166,255,0.06); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; }
+  .bar-container { display: flex; align-items: center; gap: 8px; }
+  .bar { height: 18px; background: var(--accent); border-radius: 3px; min-width: 2px; }
+  .bar.green { background: var(--green); }
+  .bar.yellow { background: var(--yellow); }
+  .bar.purple { background: var(--purple); }
+  .bar.pink { background: var(--pink); }
+  .candidate-row td:first-child { font-weight: 600; color: var(--accent); }
+  .valley-viz { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 12px 0; }
+  .valley-bar { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; position: relative; }
+  .valley-bar.valley { background: var(--yellow); }
+  .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .tag-pe { background: rgba(63,185,80,0.15); color: var(--green); }
+  .tag-cp { background: rgba(248,81,73,0.15); color: var(--red); }
+  .footer { text-align: center; padding: 24px; font-size: 12px; color: var(--dim); }
+  .footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Exoplanet Census <span>6,107 Confirmed Worlds from NASA Exoplanet Archive</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/solar-cycles" id="solar-link">Solar Cycles</a>
+    <a href="/sea-level" id="sl-link">Sea Level</a>
+    <a href="/climate" id="climate-link">Climate</a>
+    <a href="/covid-attention" id="covid-link">COVID</a>
+  </div>
+</div>
+<div class="container">
+  <div id="loading" class="loading">Loading exoplanet census data...</div>
+  <div id="content" style="display:none">
+    <div id="findings"></div>
+    <div class="stats-grid" id="stats"></div>
+    <div id="sections"></div>
+  </div>
+</div>
+<div class="footer">
+  Data from <a href="https://exoplanetarchive.ipac.caltech.edu/" target="_blank">NASA Exoplanet Archive</a> |
+  <a href="/output/research/exoplanet-census/report.md" id="report-link">Full Report</a>
+</div>
+<script>
+const TK='__TOKEN__';
+function ap(url){const u=new URL(url,location.origin);if(TK)u.searchParams.set('token',TK);return u.toString();}
+document.getElementById('home-link').href=ap('/');
+document.getElementById('solar-link').href=ap('/solar-cycles');
+document.getElementById('sl-link').href=ap('/sea-level');
+document.getElementById('climate-link').href=ap('/climate');
+document.getElementById('covid-link').href=ap('/covid-attention');
+document.getElementById('report-link').href=ap('/file/output/research/exoplanet-census/report.md');
+
+async function load(){
+  try {
+    const url=new URL('/api/exoplanet-census/summary',location.origin);
+    if(TK)url.searchParams.set('token',TK);
+    const res=await fetch(url);
+    if(!res.ok)throw new Error(await res.text());
+    const d=await res.json();
+    render(d);
+  } catch(e){
+    document.getElementById('loading').className='error';
+    document.getElementById('loading').textContent='Error: '+e.message;
+  }
+}
+
+function fmt(v,d){
+  if(v==null)return '—';
+  if(Number.isInteger(v))return v.toLocaleString();
+  return typeof d==='number'?v.toFixed(d):v.toLocaleString();
+}
+
+function statCard(label,value,sub){
+  return `<div class="stat-card"><div class="label">${label}</div><div class="value">${value}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+}
+
+function section(id,title,html){
+  return `<div class="section"><div class="section-header" onclick="toggleSection('${id}')"><span>${title}</span><span class="arrow">&#9654;</span></div><div class="section-body" id="${id}">${html}</div></div>`;
+}
+
+function toggleSection(id){
+  const body=document.getElementById(id);
+  const hdr=body.previousElementSibling;
+  body.classList.toggle('open');
+  hdr.classList.toggle('open');
+}
+
+function barChart(items,maxVal,colorFn){
+  let h='<table>';
+  items.forEach(([label,val])=>{
+    const pct=Math.max(1,val/maxVal*100);
+    const color=colorFn?colorFn(label):'';
+    h+=`<tr><td style="width:140px;white-space:nowrap">${label}</td><td><div class="bar-container"><div class="bar ${color}" style="width:${pct}%"></div><span style="font-size:12px;color:var(--dim)">${fmt(val)}</span></div></td></tr>`;
+  });
+  h+='</table>';
+  return h;
+}
+
+function render(d){
+  document.getElementById('loading').style.display='none';
+  document.getElementById('content').style.display='block';
+
+  // Key findings
+  let fhtml='';
+  d.key_findings.forEach(f=>{fhtml+=`<div class="finding">${f}</div>`;});
+  document.getElementById('findings').innerHTML=fhtml;
+
+  // Stats cards
+  const v=d.valley;
+  document.getElementById('stats').innerHTML=
+    statCard('Total Planets',fmt(d.total_planets),`As of ${d.data_date}`)+
+    statCard('Radius Valley',`${fmt(v.center_rearth,2)} R⊕`,`Depth: ${fmt(v.depth,2)}, width: ${v.width_rearth?fmt(v.width_rearth,2):'—'} R⊕`)+
+    statCard('R-P Slope (α)',`${fmt(d.radius_period_slope.alpha,3)}±${fmt(d.radius_period_slope.alpha_err,3)}`,`Favors: <span class="tag tag-pe">${d.radius_period_slope.favored_model}</span>`)+
+    statCard('Habitable Zone',fmt(d.habitable_zone.conservative_count)+' / '+fmt(d.habitable_zone.optimistic_count),'Conservative / Optimistic')+
+    statCard('Earth-like Candidates',fmt(d.habitable_zone.earthlike_count),'R < 2 R⊕, conservative HZ, FGK host')+
+    statCard('Most Common Type','Sub-Neptune',`${fmt(d.demographics.most_common_count)} planets (${fmt(d.demographics.most_common_fraction*100,1)}%)`);
+
+  // Sections
+  let shtml='';
+
+  // Discovery methods
+  const methods=Object.entries(d.discovery_methods).sort((a,b)=>b[1]-a[1]);
+  const maxMethod=methods[0][1];
+  const methodColors={'Transit':'','Radial Velocity':'green','Microlensing':'purple','Imaging':'pink'};
+  shtml+=section('sec-methods','Discovery Methods ('+fmt(d.total_planets)+' planets)',
+    barChart(methods,maxMethod,l=>methodColors[l]||''));
+
+  // Stellar types
+  const stypes=Object.entries(d.stellar_types).sort((a,b)=>b[1]-a[1]);
+  const maxStype=stypes[0][1];
+  shtml+=section('sec-stellar','Host Star Distribution',
+    barChart(stypes,maxStype,l=>l==='G'?'':l==='K'?'green':l==='F'?'yellow':'purple'));
+
+  // Stellar dependence of valley
+  let valleyHtml='<table><tr><th>Type</th><th>T_eff (K)</th><th>Sample</th><th>Valley (R⊕)</th><th>Depth</th></tr>';
+  ['M','K','G','F'].forEach(t=>{
+    const s=d.stellar_dependence[t];
+    valleyHtml+=`<tr><td><strong>${t}</strong></td><td>${s.teff_range[0]}–${s.teff_range[1]}</td><td>${fmt(s.sample_size)}</td><td>${fmt(s.valley_rearth,3)}</td><td>${fmt(s.depth,3)}</td></tr>`;
+  });
+  valleyHtml+='</table>';
+  valleyHtml+=`<div style="margin-top:12px;font-size:13px;color:var(--dim)">Valley shifts to larger radii for hotter stars: +${fmt(0.050,3)} R⊕ per 1000 K</div>`;
+  shtml+=section('sec-valley','Radius Valley — Stellar Type Dependence',valleyHtml);
+
+  // HZ candidates
+  let hzHtml='<table><tr><th>Planet</th><th>Radius (R⊕)</th><th>T_eq (K)</th><th>Insolation (S⊕)</th></tr>';
+  d.habitable_zone.top_candidates.forEach(c=>{
+    hzHtml+=`<tr class="candidate-row"><td>${c.name}</td><td>${fmt(c.radius,2)}</td><td>${fmt(c.teq,0)}</td><td>${fmt(c.insol,2)}</td></tr>`;
+  });
+  hzHtml+='</table>';
+  hzHtml+=`<div style="margin-top:12px;font-size:13px;color:var(--dim)">Conservative HZ: ${fmt(d.habitable_zone.conservative_count)} planets | Optimistic HZ: ${fmt(d.habitable_zone.optimistic_count)} planets</div>`;
+  shtml+=section('sec-hz','Habitable Zone — Earth-like Candidates',hzHtml);
+
+  // Demographics
+  const types=Object.entries(d.demographics.type_distribution).sort((a,b)=>b[1]-a[1]);
+  const maxType=types[0][1];
+  const typeColors={'sub-Neptune':'','gas giant':'yellow','super-Earth':'green','Earth-like':'green','Neptune':'purple','sub-Saturn':'pink','sub-Earth':'','super-Jupiter':'yellow'};
+  shtml+=section('sec-demo','Planet Population by Type',
+    barChart(types,maxType,l=>typeColors[l]||''));
+
+  // Top facilities
+  const facs=Object.entries(d.top_facilities);
+  const maxFac=facs[0][1];
+  shtml+=section('sec-fac','Top Discovery Facilities',
+    barChart(facs,maxFac,()=>''));
+
+  document.getElementById('sections').innerHTML=shtml;
+
+  // Auto-open first two sections
+  toggleSection('sec-methods');
+  toggleSection('sec-valley');
+}
+
+load();
+</script>
+</body>
+</html>

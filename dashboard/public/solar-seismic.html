@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar-Seismic Correlation Analysis — Does the Sun Trigger Earthquakes?</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --purple: #bc8cff; --cyan: #39d2c0; --pink: #f778ba; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header h1 span { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .header-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .header-nav a { font-size: 12px; color: var(--accent); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; }
+  .header-nav a:hover { background: rgba(88,166,255,0.1); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .loading { text-align: center; padding: 60px; color: var(--dim); }
+  .error { text-align: center; padding: 60px; color: var(--red); }
+  .verdict { text-align: center; padding: 32px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+  .verdict h2 { font-size: 24px; margin-bottom: 8px; }
+  .verdict .subtitle { font-size: 14px; color: var(--dim); margin-bottom: 16px; }
+  .verdict .result { font-size: 20px; font-weight: 700; color: var(--cyan); }
+  .verdict .result-detail { font-size: 13px; color: var(--dim); margin-top: 4px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-card .value { font-size: 22px; font-weight: 600; color: var(--accent); }
+  .stat-card .value.green { color: var(--green); }
+  .stat-card .value.red { color: var(--red); }
+  .stat-card .value.yellow { color: var(--yellow); }
+  .stat-card .value.cyan { color: var(--cyan); }
+  .stat-card .value.purple { color: var(--purple); }
+  .stat-card .sub { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-header { padding: 14px 18px; font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .section-header:hover { background: rgba(88,166,255,0.04); }
+  .section-header .arrow { color: var(--dim); transition: transform 0.2s; }
+  .section-header.open .arrow { transform: rotate(90deg); }
+  .section-body { padding: 18px; display: none; }
+  .section-body.open { display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .finding { padding: 10px 14px; background: rgba(88,166,255,0.06); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; }
+  .finding.warn { border-left-color: var(--yellow); background: rgba(210,153,34,0.06); }
+  .finding.good { border-left-color: var(--green); background: rgba(63,185,80,0.06); }
+  .finding.null { border-left-color: var(--cyan); background: rgba(57,210,192,0.06); }
+  .bar-chart { display: flex; align-items: flex-end; gap: 16px; height: 200px; padding: 16px 0; justify-content: center; }
+  .bar-group { display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 120px; }
+  .bar-wrapper { display: flex; align-items: flex-end; height: 160px; width: 100%; justify-content: center; }
+  .bar { width: 40px; border-radius: 4px 4px 0 0; position: relative; transition: height 0.5s ease; }
+  .bar .val { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; white-space: nowrap; }
+  .bar-label { font-size: 11px; color: var(--dim); margin-top: 8px; text-align: center; }
+  .ci-band { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  .ci-inside { background: rgba(63,185,80,0.15); color: var(--green); }
+  .ci-outside { background: rgba(248,81,73,0.15); color: var(--red); }
+  .corr-chart { display: flex; align-items: center; gap: 2px; height: 120px; justify-content: center; padding: 10px 0; overflow-x: auto; }
+  .corr-bar { width: 8px; border-radius: 2px; transition: height 0.3s; position: relative; }
+  .corr-bar:hover::after { content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); padding: 2px 6px; font-size: 10px; white-space: nowrap; border-radius: 4px; z-index: 10; }
+  .legend { display: flex; gap: 16px; justify-content: center; margin: 8px 0; font-size: 12px; color: var(--dim); }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .report-link { display: inline-block; margin-top: 16px; padding: 8px 16px; background: rgba(88,166,255,0.1); border: 1px solid var(--accent); border-radius: 6px; color: var(--accent); text-decoration: none; font-size: 13px; }
+  .report-link:hover { background: rgba(88,166,255,0.2); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Solar-Seismic Analysis <span>Does the Sun Trigger Earthquakes?</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/solar-cycles" id="sc-link">Solar Cycles</a>
+    <a href="/ocean-warming" id="ow-link">Ocean Warming</a>
+    <a href="/uk-grid-decarb" id="gd-link">UK Grid</a>
+    <a href="/us-debt-dynamics" id="ud-link">US Debt</a>
+  </div>
+</div>
+<div class="container" id="content">
+  <div class="loading" id="loading">Loading solar-seismic analysis...</div>
+</div>
+<script>
+const TK='__TOKEN__';
+function ap(u){const x=new URL(u,location.origin);if(TK)x.searchParams.set('token',TK);return x.toString();}
+document.getElementById('home-link').href=ap('/');
+document.getElementById('sc-link').href=ap('/solar-cycles');
+document.getElementById('ow-link').href=ap('/ocean-warming');
+document.getElementById('gd-link').href=ap('/uk-grid-decarb');
+document.getElementById('ud-link').href=ap('/us-debt-dynamics');
+
+async function load(){
+  try {
+    const r = await fetch(ap('/api/solar-seismic/summary'));
+    if(!r.ok) throw new Error('API returned '+r.status);
+    const d = await r.json();
+    render(d);
+  } catch(e) {
+    document.getElementById('content').innerHTML='<div class="error">Failed to load data: '+e.message+'</div>';
+  }
+}
+
+function render(d){
+  const hs = d.headline_stats || {};
+  const rob = d.robustness || {};
+  const findings = d.key_findings || [];
+
+  let html = '';
+
+  // Verdict
+  html += `<div class="verdict">
+    <h2>Verdict: No Significant Solar-Seismic Correlation</h2>
+    <div class="subtitle">${d.data_period} &mdash; ${(d.total_earthquakes||0).toLocaleString()} earthquakes &mdash; ${d.solar_cycles_covered||6} solar cycles</div>
+    <div class="result">H1 (Null Hypothesis) Supported</div>
+    <div class="result-detail">${d.tests_significant}/${d.tests_total} tests significant &mdash; the one significant test shows the <em>wrong direction</em></div>
+  </div>`;
+
+  // Stats grid
+  html += '<div class="stats-grid">';
+  html += statCard('Cross-Correlation', 'r = '+(hs.max_cross_correlation||0).toFixed(3), 'p = '+(hs.cross_correlation_p||0).toFixed(3)+' (not significant)', 'cyan');
+  html += statCard('Spectral Coherence', 'C = '+(hs.spectral_coherence_schwabe||0).toFixed(2), 'Threshold = '+(hs.coherence_threshold||0).toFixed(2), 'cyan');
+  html += statCard('Granger Causality', 'p = '+(hs.granger_best_p||0).toFixed(3), 'Marginal, not significant', 'yellow');
+  html += statCard('M7.0+ Correlation', 'r = '+(hs.m70_correlation||0).toFixed(3), 'p = '+(hs.m70_p_value||0).toFixed(3)+' (vanishes)', 'green');
+  html += statCard('Detrended (Annual)', 'r = '+(hs.annual_detrended_r||0).toFixed(3), 'p = '+(hs.annual_detrended_p||0).toFixed(3)+' (not sig.)', 'cyan');
+  html += statCard('Total Earthquakes', (d.total_earthquakes||0).toLocaleString(), 'M5.0+ events analyzed', 'purple');
+  html += '</div>';
+
+  // Test Results Table
+  html += section('Statistical Test Results', true, `
+    <table>
+      <tr><th>Test</th><th>Statistic</th><th>p-value</th><th>Significant?</th><th>Interpretation</th></tr>
+      <tr><td>Cross-correlation (phase-rand.)</td><td>max |r| = ${(hs.max_cross_correlation||0).toFixed(3)}</td><td>${(hs.cross_correlation_p||0).toFixed(3)}</td><td style="color:var(--green)">No</td><td>Well within bootstrap null distribution</td></tr>
+      <tr><td>Spectral coherence @ ~11yr</td><td>C = ${(hs.spectral_coherence_schwabe||0).toFixed(3)}</td><td>threshold ${(hs.coherence_threshold||0).toFixed(3)}</td><td style="color:var(--green)">No</td><td>No shared periodicity at Schwabe frequency</td></tr>
+      <tr><td>Granger: SSN &rarr; EQ</td><td>F = 3.17 (lag 1)</td><td>${(hs.granger_best_p||0).toFixed(3)}</td><td style="color:var(--yellow)">Marginal</td><td>Does not survive multiple-comparison correction</td></tr>
+      <tr><td>Epoch comparison</td><td>U = 56,424</td><td>&lt; 10<sup>-9</sup></td><td style="color:var(--red)">Yes*</td><td>Wrong direction: more EQ during LOW SSN</td></tr>
+      <tr><td>Annual detrended</td><td>r = ${(hs.annual_detrended_r||0).toFixed(3)}</td><td>${(hs.annual_detrended_p||0).toFixed(3)}</td><td style="color:var(--green)">No</td><td>Confound removed &rarr; no signal</td></tr>
+    </table>
+    <div class="finding warn" style="margin-top:12px">*Epoch comparison shows <strong>more earthquakes during LOW solar activity</strong> &mdash; the opposite of all proposed mechanisms. This is a catalog completeness confound: recent decades have better detection AND lower SSN.</div>
+  `);
+
+  // Magnitude robustness
+  html += section('Magnitude Threshold Robustness', true, `
+    <p style="margin-bottom:12px;font-size:13px;color:var(--dim)">If solar activity truly affected earthquakes, the correlation should be strongest at higher magnitudes (larger events). Instead, it vanishes at M7.0+.</p>
+    ${magnitudeChart(rob)}
+    <table style="margin-top:12px">
+      <tr><th>Threshold</th><th>Events</th><th>Pearson r</th><th>p-value</th><th>Signal?</th></tr>
+      ${magRow(rob, 'M5.0+')}
+      ${magRow(rob, 'M5.5+')}
+      ${magRow(rob, 'M6.0+')}
+      ${magRow(rob, 'M7.0+')}
+    </table>
+    <div class="finding null" style="margin-top:12px">The correlation is a <strong>detection artifact</strong>: it exists only at thresholds affected by catalog completeness improvements. M7.0+ earthquakes have been reliably detected since 1960 and show <em>no correlation</em> (r = &minus;0.027, p = 0.451).</div>
+  `);
+
+  // Key Findings
+  html += section('Key Findings', true, findings.map((f,i) => `<div class="finding ${i===3?'null':i===4?'warn':''}">${f}</div>`).join(''));
+
+  // The Completeness Confound
+  html += section('The Completeness Confound', false, `
+    <p style="margin-bottom:12px;font-size:13px;">The raw Pearson correlation (r = &minus;0.096, p = 0.007) <em>is</em> statistically significant by conventional standards. This is why naive analyses find "evidence" for solar-seismic coupling. Three lines of evidence demonstrate it's an artifact:</p>
+    <div class="finding null">1. The correlation is <strong>negative</strong> (more EQ during low SSN) &mdash; opposite to all proposed physical mechanisms</div>
+    <div class="finding null">2. The correlation <strong>vanishes at M7.0+</strong> where catalog completeness is not an issue</div>
+    <div class="finding null">3. The <strong>annual detrended correlation is non-significant</strong> (r = &minus;0.115, p = 0.362)</div>
+    <table style="margin-top:12px">
+      <tr><th>Year</th><th>Monthly EQ Count</th><th>SSN</th><th>Detection Quality</th></tr>
+      <tr><td>1960</td><td>~24</td><td>159</td><td>Sparse global network</td></tr>
+      <tr><td>1980</td><td>~86</td><td>155</td><td>Improved WWSSN coverage</td></tr>
+      <tr><td>2000</td><td>~119</td><td>120</td><td>Digital broadband era</td></tr>
+      <tr><td>2024</td><td>~125</td><td>155</td><td>Modern comprehensive catalog</td></tr>
+    </table>
+    <p style="margin-top:12px;font-size:13px;color:var(--dim)">Earthquake detection improved 5.3&times; while SSN trended downward. The opposing secular trends create a spurious negative correlation.</p>
+  `);
+
+  // Literature comparison
+  html += section('Comparison to Recent Literature', false, `
+    <div class="finding"><strong>Marchitelli et al. (2025, GRL)</strong>: Found correlation between intense geomagnetic storms and earthquakes at 1-day lag. Operates at a fundamentally different timescale (hours vs. months) and tests a different mechanism. Our analysis does not contradict their result.</div>
+    <div class="finding"><strong>LSTM classifier (2024, 84% accuracy)</strong>: ML can find nonlinear patterns, but can also overfit to coincident secular trends. Without completeness detrending, a neural network would easily learn the SSN-detection association.</div>
+    <div class="finding good"><strong>USGS position (no causal link)</strong>: Our results are fully consistent with the USGS position at the monthly/annual timescale.</div>
+  `);
+
+  // Report link
+  html += `<div style="text-align:center;padding:24px 0">
+    <a class="report-link" href="${ap('/api/files?dir=output/research/solar-seismic')}" target="_blank">View Full Report</a>
+    <div style="margin-top:8px;font-size:12px;color:var(--dim)">First cross-project data composition: solar-cycles-v1 + seismicity-v1</div>
+  </div>`;
+
+  document.getElementById('content').innerHTML = html;
+  document.querySelectorAll('.section-header').forEach(h => {
+    h.onclick = () => {
+      h.classList.toggle('open');
+      h.nextElementSibling.classList.toggle('open');
+    };
+  });
+}
+
+function statCard(label, value, sub, color='accent') {
+  return `<div class="stat-card"><div class="label">${label}</div><div class="value ${color}">${value}</div><div class="sub">${sub}</div></div>`;
+}
+
+function section(title, openByDefault, body) {
+  return `<div class="section"><div class="section-header ${openByDefault?'open':''}">${title}<span class="arrow">&#9654;</span></div><div class="section-body ${openByDefault?'open':''}">${body}</div></div>`;
+}
+
+function magnitudeChart(rob) {
+  const thresholds = ['M5.0+', 'M5.5+', 'M6.0+', 'M7.0+'];
+  const maxR = 0.15;
+  let html = '<div class="bar-chart">';
+  for (const t of thresholds) {
+    const d = rob[t];
+    if (!d) continue;
+    const r = Math.abs(d.r || 0);
+    const h = Math.max(4, (r / maxR) * 140);
+    const sig = (d.p || 1) < 0.05;
+    const color = sig ? 'var(--yellow)' : 'var(--green)';
+    html += `<div class="bar-group">
+      <div class="bar-wrapper"><div class="bar" style="height:${h}px;background:${color}"><div class="val" style="color:${color}">|r|=${r.toFixed(3)}</div></div></div>
+      <div class="bar-label">${t}<br><span style="font-size:10px;color:${sig?'var(--yellow)':'var(--green)'}">p=${(d.p||0).toFixed(3)}</span></div>
+    </div>`;
+  }
+  html += '</div>';
+  html += '<div class="legend"><span><span class="legend-dot" style="background:var(--yellow)"></span>Significant (p&lt;0.05)</span><span><span class="legend-dot" style="background:var(--green)"></span>Not significant</span></div>';
+  return html;
+}
+
+function magRow(rob, t) {
+  const d = rob[t];
+  if (!d) return '';
+  const sig = (d.p||1) < 0.05;
+  return `<tr><td>${t}</td><td>${(d.n_events||(t==='M5.0+'?93399:t==='M5.5+'?29803:t==='M6.0+'?8944:882)).toLocaleString()}</td><td>${(d.r||0).toFixed(3)}</td><td>${(d.p||0)<0.001?'< 0.001':(d.p||0).toFixed(3)}</td><td style="color:${sig?'var(--yellow)':'var(--green)'};">${sig?'Confound artifact':'No signal'}</td></tr>`;
+}
+
+load();
+</script>
+</body>
+</html>

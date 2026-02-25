@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Currency Contagion — Crisis Propagation in Global FX Markets</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --purple: #bc8cff; --cyan: #39d2c0; --pink: #f778ba; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header h1 span { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .header-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .header-nav a { font-size: 12px; color: var(--accent); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; }
+  .header-nav a:hover { background: rgba(88,166,255,0.1); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .loading { text-align: center; padding: 60px; color: var(--dim); }
+  .error { text-align: center; padding: 60px; color: var(--red); }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-card .value { font-size: 22px; font-weight: 600; color: var(--accent); }
+  .stat-card .value.green { color: var(--green); }
+  .stat-card .value.red { color: var(--red); }
+  .stat-card .value.yellow { color: var(--yellow); }
+  .stat-card .value.purple { color: var(--purple); }
+  .stat-card .detail { font-size: 11px; color: var(--dim); margin-top: 4px; }
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-header { padding: 14px 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .section-header:hover { background: rgba(88,166,255,0.04); }
+  .section-header h2 { font-size: 15px; font-weight: 600; }
+  .section-header .toggle { color: var(--dim); font-size: 12px; }
+  .section-body { display: none; padding: 0 18px 18px; }
+  .section.open .section-body { display: block; }
+  .section.open .toggle::after { content: '\25B2'; }
+  .section:not(.open) .toggle::after { content: '\25BC'; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: rgba(88,166,255,0.04); }
+  .bar-container { display: flex; align-items: center; gap: 8px; }
+  .bar { height: 12px; border-radius: 3px; min-width: 2px; }
+  .bar.positive { background: var(--green); }
+  .bar.negative { background: var(--red); }
+  .bar.accent { background: var(--accent); }
+  .bar.yellow { background: var(--yellow); }
+  .finding { background: rgba(88,166,255,0.05); border-left: 3px solid var(--accent); padding: 12px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; }
+  .finding strong { color: var(--accent); }
+  .finding p { margin-top: 4px; color: var(--dim); font-size: 13px; }
+  .finding.warn { border-left-color: var(--yellow); }
+  .finding.warn strong { color: var(--yellow); }
+  .finding.red-border { border-left-color: var(--red); }
+  .finding.red-border strong { color: var(--red); }
+  .report-link { display: inline-block; margin-top: 16px; padding: 8px 16px; background: rgba(88,166,255,0.1); border: 1px solid var(--accent); border-radius: 6px; color: var(--accent); text-decoration: none; font-size: 13px; }
+  .report-link:hover { background: rgba(88,166,255,0.2); }
+  .crisis-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .crisis-badge.extreme { background: rgba(248,81,73,0.2); color: var(--red); }
+  .crisis-badge.high { background: rgba(210,153,34,0.2); color: var(--yellow); }
+  .crisis-badge.medium { background: rgba(88,166,255,0.2); color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Currency Contagion <span>Crisis Propagation in Global FX Markets (1999-2025)</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/us-debt-dynamics" id="debt-link">US Debt</a>
+    <a href="/uk-grid-decarb" id="grid-link">UK Grid</a>
+    <a href="/river-flow" id="river-link">River Flow</a>
+  </div>
+</div>
+
+<div class="container">
+  <div id="content"><div class="loading">Loading currency contagion data...</div></div>
+</div>
+
+<script>
+const TOKEN = '__TOKEN__';
+function ap(u) { return TOKEN ? u + (u.includes('?') ? '&' : '?') + 'token=' + TOKEN : u; }
+document.querySelectorAll('.header-nav a').forEach(a => { a.href = ap(a.getAttribute('href')); });
+
+async function init() {
+  try {
+    const r = await fetch(ap('/api/currency-contagion/summary'));
+    if (!r.ok) throw new Error('Failed to load data');
+    const d = await r.json();
+    render(d);
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="error">Failed to load data: ' + e.message + '</div>';
+  }
+}
+
+function render(d) {
+  let html = '';
+
+  // Stats grid
+  html += '<div class="stats-grid">';
+  html += card('Currencies', d.data.currencies, d.data.date_range);
+  html += card('Crisis Episodes', d.crises.n_detected, 'Endogenously detected', 'red');
+  html += card('Calm Correlation', d.contagion.calm_correlation.toFixed(3), 'Mean pairwise baseline');
+  html += card('Strongest Surge', d.contagion.strongest_surge, 'Highest contagion episode', 'yellow');
+  html += card('Top Canary', d.canaries.top_5[0].currency, 'Lead: ' + d.canaries.top_5[0].mean_lead.toFixed(1) + ' days', 'purple');
+  html += card('GFC Break p-value', d.structural.era_break_p.toFixed(3), 'Statistically significant', 'green');
+  html += '</div>';
+
+  // Key Findings
+  html += sec('Key Findings', true);
+  html += '<div class="finding"><strong>Correlations surge during crises.</strong><p>Mean pairwise correlation rises from ' +
+    d.contagion.calm_correlation.toFixed(3) + ' (calm) to crisis peaks of 0.45-0.60, confirming that FX markets synchronize under stress. EM-EM pairs synchronize most dramatically.</p></div>';
+  html += '<div class="finding warn"><strong>Structural break at the GFC (p=' + d.structural.era_break_p.toFixed(3) + ').</strong><p>Post-2010 network density (' +
+    d.structural.post_gfc_density.toFixed(3) + ') is 82% higher than pre-2010 (' + d.structural.pre_gfc_density.toFixed(3) +
+    '). Markets became permanently more interconnected after 2008 — likely reflecting ETF/passive flow growth and EM capital market integration.</p></div>';
+  html += '<div class="finding"><strong>Canary lead times are near-zero.</strong><p>The top canary (BRL) leads by only 0.6 days. Crises transmit near-simultaneously — not sequential contagion but common-factor reactions hitting EM currencies first due to higher risk beta.</p></div>';
+  html += '<div class="finding red-border"><strong>No linear trend in contagion (p=' + (d.structural.density_trend_p || 0).toFixed(3) +
+    ').</strong><p>Contagion did not gradually worsen — it jumped to a permanently higher level after the GFC and has remained there. This is a step change, not a trend.</p></div>';
+  html += '<a class="report-link" href="' + ap('/api/files/read?path=/output/research/currency-contagion/report.md') + '">Read Full Report</a>';
+  html += '</div></div>';
+
+  // Crisis Episodes
+  html += sec('Crisis Episodes', true);
+  html += '<table><thead><tr><th>Crisis</th><th>Period</th><th>Duration</th><th>Affected</th><th>Peak</th><th>Severity</th></tr></thead><tbody>';
+  d.crises.episodes.forEach(function(c) {
+    var sev = c.duration > 200 ? 'extreme' : c.n_affected > 12 ? 'high' : c.n_affected > 8 ? 'medium' : 'medium';
+    html += '<tr><td><strong>' + c.name + '</strong></td><td>' + c.start + ' to ' + c.end + '</td>';
+    html += '<td>' + c.duration + 'd</td><td>' + c.n_affected + '</td><td>' + c.peak + '</td>';
+    html += '<td><span class="crisis-badge ' + sev + '">' + sev.toUpperCase() + '</span></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  // Contagion per crisis
+  html += sec('Contagion per Crisis', true);
+  html += '<table><thead><tr><th>Crisis</th><th>Mean r</th><th>Surge</th><th>Contagion Bar</th></tr></thead><tbody>';
+  var maxSurge = Math.max.apply(null, d.contagion.crisis_correlations.map(function(c){return c.surge;}));
+  d.contagion.crisis_correlations.forEach(function(c) {
+    var barW = Math.round((c.surge / maxSurge) * 150);
+    html += '<tr><td><strong>' + c.name + '</strong></td><td>' + c.corr.toFixed(3) + '</td>';
+    html += '<td>+' + c.surge.toFixed(3) + '</td>';
+    html += '<td><div class="bar-container"><div class="bar yellow" style="width:' + barW + 'px"></div></div></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  // Canary rankings
+  html += sec('Canary Currencies', false);
+  html += '<p style="color:var(--dim);margin-bottom:12px">Currencies whose volatility consistently spikes before others during crisis onsets. Lead time in days (positive = early warning).</p>';
+  html += '<table><thead><tr><th>Rank</th><th>Currency</th><th>Type</th><th>Mean Lead</th><th>Crises</th><th>Visual</th></tr></thead><tbody>';
+  d.canaries.top_5.forEach(function(c, i) {
+    var maxLead = d.canaries.top_5[0].mean_lead || 1;
+    var barW = Math.max(2, Math.round((c.mean_lead / maxLead) * 100));
+    html += '<tr><td>' + (i+1) + '</td><td><strong>' + c.currency + '</strong></td>';
+    html += '<td>' + c.type + '</td><td>' + c.mean_lead.toFixed(1) + 'd</td>';
+    html += '<td>' + c.crises + '</td>';
+    html += '<td><div class="bar-container"><div class="bar accent" style="width:' + barW + 'px"></div></div></td></tr>';
+  });
+  html += '</tbody></table>';
+
+  // Regional canaries
+  var reg = d.canaries.regional;
+  if (reg && Object.keys(reg).length > 0) {
+    html += '<p style="margin-top:16px;font-size:13px;color:var(--dim)"><strong>Regional canaries:</strong> ';
+    Object.keys(reg).forEach(function(region, i) {
+      if (i > 0) html += ' | ';
+      var r = reg[region];
+      var ccy = typeof r === 'string' ? r : r.currency;
+      html += region + ': ' + ccy;
+    });
+    html += '</p>';
+  }
+  html += '</div></div>';
+
+  // Most Crisis-Prone
+  html += sec('Most Crisis-Prone Currencies', false);
+  html += '<table><thead><tr><th>Rank</th><th>Currency</th><th>% Time in Crisis</th><th>Visual</th></tr></thead><tbody>';
+  d.most_crisis_prone.forEach(function(v, i) {
+    var barW = Math.round((v.pct / d.most_crisis_prone[0].pct) * 150);
+    html += '<tr><td>' + (i+1) + '</td><td><strong>' + v.currency + '</strong></td>';
+    html += '<td>' + v.pct.toFixed(2) + '%</td>';
+    html += '<td><div class="bar-container"><div class="bar negative" style="width:' + barW + 'px"></div></div></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  // Structural break
+  html += sec('Structural Break: Pre vs Post GFC', false);
+  html += '<div class="stats-grid">';
+  html += card('Pre-2010 Density', d.structural.pre_gfc_density.toFixed(3), '2 crises');
+  html += card('Post-2010 Density', d.structural.post_gfc_density.toFixed(3), '9+ crises (+82%)', 'red');
+  html += card('Break Significance', 'p=' + d.structural.era_break_p.toFixed(3), 'Welch t-test', 'green');
+  html += card('Trend (linear)', 'p=' + (d.structural.density_trend_p || 0).toFixed(3), 'Not significant');
+  html += '</div>';
+  html += '<div class="finding warn"><strong>Step change, not gradual trend.</strong><p>Post-GFC crises show 82% higher network density (0.637 vs 0.350, p=0.011). But no linear trend exists (p=0.48). Contagion jumped to a permanently higher level after 2008 and has remained there, consistent with a structural break in global FX market integration.</p></div>';
+  html += '</div></div>';
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function card(label, value, detail, color) {
+  var cls = color ? ' ' + color : '';
+  return '<div class="stat-card"><div class="label">' + label + '</div><div class="value' + cls + '">' + value + '</div>' + (detail ? '<div class="detail">' + detail + '</div>' : '') + '</div>';
+}
+
+function sec(title, open) {
+  return '<div class="section' + (open ? ' open' : '') + '"><div class="section-header" onclick="toggleSection(this)"><h2>' + title + '</h2><span class="toggle"></span></div><div class="section-body">';
+}
+
+function toggleSection(header) {
+  header.parentElement.classList.toggle('open');
+}
+
+init();
+</script>
+</body>
+</html>

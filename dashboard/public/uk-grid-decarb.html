@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UK Grid Decarbonisation — 8 Years of Electricity Transformation</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --purple: #bc8cff; --cyan: #39d2c0; --pink: #f778ba; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header h1 span { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .header-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .header-nav a { font-size: 12px; color: var(--accent); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; }
+  .header-nav a:hover { background: rgba(88,166,255,0.1); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .loading { text-align: center; padding: 60px; color: var(--dim); }
+  .error { text-align: center; padding: 60px; color: var(--red); }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-card .value { font-size: 22px; font-weight: 600; color: var(--accent); }
+  .stat-card .value.green { color: var(--green); }
+  .stat-card .value.red { color: var(--red); }
+  .stat-card .value.yellow { color: var(--yellow); }
+  .stat-card .value.cyan { color: var(--cyan); }
+  .stat-card .sub { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-header { padding: 14px 18px; font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .section-header:hover { background: rgba(88,166,255,0.04); }
+  .section-header .arrow { color: var(--dim); transition: transform 0.2s; }
+  .section-header.open .arrow { transform: rotate(90deg); }
+  .section-body { padding: 18px; display: none; }
+  .section-body.open { display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .finding { padding: 10px 14px; background: rgba(88,166,255,0.06); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; }
+  .bar-container { display: flex; align-items: center; gap: 8px; }
+  .bar { height: 16px; border-radius: 3px; min-width: 2px; }
+  .bar.green { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+  .bar.gas { background: linear-gradient(90deg, var(--yellow), var(--red)); }
+  .bar.accent { background: var(--accent); }
+  .ci-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; padding: 8px 0; }
+  .ci-bar { flex: 1; border-radius: 3px 3px 0 0; position: relative; min-height: 2px; }
+  .ci-bar .yr-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--dim); white-space: nowrap; }
+  .ci-bar .val-label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text); white-space: nowrap; }
+  .region-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .region-row:last-child { border-bottom: none; }
+  .region-name { width: 150px; font-size: 13px; flex-shrink: 0; }
+  .region-bar-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
+  .region-ci-bar { height: 18px; border-radius: 3px; min-width: 2px; }
+  .region-ci-val { font-size: 12px; color: var(--dim); width: 60px; text-align: right; flex-shrink: 0; }
+  .footer { text-align: center; padding: 24px; font-size: 12px; color: var(--dim); }
+  .footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>UK Grid Decarbonisation <span>148K half-hourly observations, 2017–2026</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/ocean-warming" id="ocean-link">Ocean Warming</a>
+    <a href="/solar-cycles" id="solar-link">Solar Cycles</a>
+    <a href="/exoplanet-census" id="exo-link">Exoplanet Census</a>
+  </div>
+</div>
+
+<div class="container">
+  <div id="content">
+    <div class="loading">Loading UK Grid Decarbonisation data...</div>
+  </div>
+</div>
+
+<div class="footer">
+  Data: <a href="https://api.carbonintensity.org.uk/" target="_blank">UK Carbon Intensity API</a> (National Grid ESO) |
+  <a href="#" id="report-link">Full Report</a>
+</div>
+
+<script>
+const TK = '__TOKEN__';
+function ap(u) { const x = new URL(u, location.origin); if (TK) x.searchParams.set('token', TK); return x.toString(); }
+document.getElementById('home-link').href = ap('/');
+document.getElementById('ocean-link').href = ap('/ocean-warming');
+document.getElementById('solar-link').href = ap('/solar-cycles');
+document.getElementById('exo-link').href = ap('/exoplanet-census');
+
+async function load() {
+  try {
+    const r = await fetch(ap('/api/uk-grid-decarb/summary'));
+    if (!r.ok) throw new Error('API returned ' + r.status);
+    const d = await r.json();
+    render(d);
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="error">Failed to load data: ' + e.message + '</div>';
+  }
+}
+
+function render(d) {
+  const h = d.headline_stats || {};
+  const duck = d.duck_curve || {};
+  const fuel = d.fuel_switching || {};
+  const dim = d.diminishing_returns || {};
+  const reg = d.regional || {};
+
+  // Report link
+  if (d.report_path) {
+    document.getElementById('report-link').href = ap('/api/file?path=' + encodeURIComponent(d.report_path));
+  }
+
+  let html = '';
+
+  // === Stats grid ===
+  html += '<div class="stats-grid">';
+  html += statCard('CI 2018', h.ci_2018?.toFixed(0) + ' g', 'gCO2/kWh', 'red');
+  html += statCard('CI 2025', h.ci_2025?.toFixed(0) + ' g', 'gCO2/kWh', 'green');
+  html += statCard('Reduction', h.ci_reduction_pct?.toFixed(0) + '%', 'in 7 years', 'green');
+  html += statCard('Trend', h.ci_trend_per_year?.toFixed(1) + ' g/yr', 'R²=' + h.ci_trend_r_squared?.toFixed(3), 'accent');
+  html += statCard('Renewables', h.renewable_2025?.toFixed(0) + '%', 'up from ' + h.renewable_2018?.toFixed(0) + '% (2018)', 'green');
+  html += statCard('Coal-Free', Math.round(h.coal_zero_days) + ' days', 'consecutive zero-coal', 'green');
+  html += statCard('Duck Curve', duck.jja_deepening_per_year?.toFixed(1) + ' g/yr', 'summer dip deepening', 'yellow');
+  html += statCard('Wind Droughts', fuel.total_wind_droughts, 'identified events', 'red');
+  html += '</div>';
+
+  // === CI Trajectory Chart ===
+  html += '<div class="section"><div class="section-header open" onclick="toggleSection(this)">Carbon Intensity Trajectory (2018–2025) <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body open">';
+  html += '<div class="finding">Carbon intensity declined <strong>' + h.ci_reduction_pct?.toFixed(0) + '%</strong> from ' + h.ci_2018?.toFixed(0) + ' to ' + h.ci_2025?.toFixed(0) + ' gCO2/kWh — at ' + Math.abs(h.ci_trend_per_year)?.toFixed(1) + ' gCO2/kWh per year (R²=' + h.ci_trend_r_squared?.toFixed(3) + ', p<0.001).</div>';
+  if (d.annual_ci) {
+    html += '<div class="ci-chart">';
+    const maxCI = Math.max(...d.annual_ci.map(a => a.ci));
+    d.annual_ci.forEach(a => {
+      const pct = (a.ci / maxCI * 100);
+      const green = Math.round(255 * (1 - a.ci / maxCI));
+      const red = Math.round(255 * (a.ci / maxCI));
+      html += '<div class="ci-bar" style="height:' + pct + '%;background:rgb(' + red + ',' + green + ',80)">';
+      html += '<span class="val-label">' + a.ci.toFixed(0) + '</span>';
+      html += '<span class="yr-label">' + a.year + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div style="height:24px"></div>';
+  }
+  html += '</div></div>';
+
+  // === Duck Curve ===
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">The Duck Curve <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body">';
+  html += '<div class="finding">Summer midday dip deepening at <strong>' + Math.abs(duck.jja_deepening_per_year)?.toFixed(1) + ' gCO2/kWh per year</strong> (p=' + duck.jja_deepening_p_value?.toFixed(3) + '). Belly-to-peak ratio fell to <strong>' + duck.belly_to_peak_2024_jja?.toFixed(3) + '</strong> in summer 2024 — midday CI is barely half the evening peak.</div>';
+  html += '<p style="margin-top:12px;color:var(--dim);font-size:13px">As solar capacity grows, midday carbon intensity plunges relative to morning and evening peaks. The UK now exhibits its own version of California\'s famous "duck curve" — a daily concave carbon intensity profile, particularly in summer. The evening ramp challenge grows steeper each year as gas turbines must respond faster when solar fades.</p>';
+  html += '</div></div>';
+
+  // === Fuel Switching ===
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Fuel Switching & Gas Dependency <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body">';
+  html += '<div class="finding">Wind-gas anti-correlation: <strong>r=' + fuel.wind_gas_correlation?.toFixed(3) + '</strong> — the strongest fuel switching relationship. When wind drops >5pp, gas fills <strong>+' + fuel.gas_response_to_wind_drop?.toFixed(1) + ' pp</strong> on average.</div>';
+  html += '<p style="margin-top:12px;color:var(--dim);font-size:13px"><strong>' + fuel.total_wind_droughts + ' wind droughts</strong> were identified (wind &lt;5% for &gt;24h). During droughts, gas surges to 40–62% and CI averages 220–400 gCO2/kWh. Frequency has declined from 10/year (2018) to ~1/year (2023–25) as geographic wind diversity grows.</p>';
+  html += '</div></div>';
+
+  // === Diminishing Returns ===
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Diminishing Returns <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body">';
+  const ratio80 = Math.round(dim.ratio_80_to_20 * 100);
+  html += '<div class="finding">CI–renewable relationship is <strong>concave</strong> (quadratic, AIC-selected). At 80% RE, each pp delivers only <strong>' + ratio80 + '%</strong> of the reduction at 20% RE.</div>';
+  html += '<table><thead><tr><th>RE Share</th><th>Marginal CI Reduction</th></tr></thead><tbody>';
+  html += '<tr><td>20%</td><td>' + dim.marginal_at_20?.toFixed(2) + ' gCO2/kWh per pp</td></tr>';
+  html += '<tr><td>80%</td><td>' + dim.marginal_at_80?.toFixed(2) + ' gCO2/kWh per pp</td></tr>';
+  html += '</tbody></table>';
+  html += '<p style="margin-top:12px;color:var(--dim);font-size:13px">With coal eliminated, renewables now displace gas (394 gCO2/kWh) rather than coal (937 gCO2/kWh) — less than half the benefit per unit. The curve flattens over time as the marginal displaced fuel becomes progressively cleaner.</p>';
+  html += '</div></div>';
+
+  // === Regional Divergence ===
+  html += '<div class="section"><div class="section-header open" onclick="toggleSection(this)">A Tale of Two Grids — Regional Divergence <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body open">';
+  html += '<div class="finding"><strong>' + reg.cleanest_region + '</strong>: ' + reg.cleanest_ci?.toFixed(0) + ' gCO2/kWh (essentially decarbonised) vs <strong>' + reg.dirtiest_region + '</strong>: ' + reg.dirtiest_ci?.toFixed(0) + ' gCO2/kWh — a <strong>' + (reg.dirtiest_ci / reg.cleanest_ci)?.toFixed(0) + '× gap</strong>.</div>';
+  html += '<div class="finding" style="border-left-color:var(--yellow)">North-south gap <strong>widening</strong> at +' + reg.gap_widening_per_year?.toFixed(1) + ' gCO2/kWh/yr (p=0.047), but overall σ <strong>converging</strong> at ' + reg.sigma_converging_per_year?.toFixed(1) + '/yr (p=0.002). Middle compresses while extremes diverge.</div>';
+
+  // Region bars
+  if (d.region_snapshot) {
+    html += '<div style="margin-top:16px">';
+    d.region_snapshot.forEach(r => {
+      const maxCI = 260;
+      const pct = Math.min(r.ci / maxCI * 100, 100);
+      const hue = 120 * (1 - r.ci / maxCI);
+      html += '<div class="region-row">';
+      html += '<div class="region-name">' + r.name + '</div>';
+      html += '<div class="region-bar-wrap">';
+      html += '<div class="region-ci-bar" style="width:' + pct + '%;background:hsl(' + hue + ',60%,45%)"></div>';
+      html += '</div>';
+      html += '<div class="region-ci-val">' + r.ci.toFixed(0) + ' g</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div></div>';
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function statCard(label, value, sub, cls) {
+  return '<div class="stat-card"><div class="label">' + label + '</div><div class="value ' + (cls||'') + '">' + value + '</div><div class="sub">' + (sub||'') + '</div></div>';
+}
+
+function toggleSection(el) {
+  el.classList.toggle('open');
+  const body = el.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+load();
+</script>
+</body>
+</html>

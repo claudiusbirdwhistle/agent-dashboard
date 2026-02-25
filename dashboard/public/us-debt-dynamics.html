@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US Federal Debt Dynamics — 236 Years of Fiscal History</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --purple: #bc8cff; --cyan: #39d2c0; --pink: #f778ba; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header h1 span { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .header-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .header-nav a { font-size: 12px; color: var(--accent); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; }
+  .header-nav a:hover { background: rgba(88,166,255,0.1); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .loading { text-align: center; padding: 60px; color: var(--dim); }
+  .error { text-align: center; padding: 60px; color: var(--red); }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-card .value { font-size: 22px; font-weight: 600; color: var(--accent); }
+  .stat-card .value.green { color: var(--green); }
+  .stat-card .value.red { color: var(--red); }
+  .stat-card .value.yellow { color: var(--yellow); }
+  .stat-card .value.cyan { color: var(--cyan); }
+  .stat-card .value.purple { color: var(--purple); }
+  .stat-card .sub { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-header { padding: 14px 18px; font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .section-header:hover { background: rgba(88,166,255,0.04); }
+  .section-header .arrow { color: var(--dim); transition: transform 0.2s; }
+  .section-header.open .arrow { transform: rotate(90deg); }
+  .section-body { padding: 18px; display: none; }
+  .section-body.open { display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .finding { padding: 10px 14px; background: rgba(88,166,255,0.06); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; }
+  .finding.warn { border-left-color: var(--yellow); background: rgba(210,153,34,0.06); }
+  .finding.danger { border-left-color: var(--red); background: rgba(248,81,73,0.06); }
+  .finding.good { border-left-color: var(--green); background: rgba(63,185,80,0.06); }
+  .chart-area { display: flex; align-items: flex-end; gap: 3px; height: 160px; padding: 8px 0; }
+  .chart-bar { flex: 1; border-radius: 3px 3px 0 0; position: relative; min-height: 2px; cursor: default; }
+  .chart-bar .yr { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--dim); white-space: nowrap; }
+  .chart-bar .val { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--text); white-space: nowrap; }
+  .bar-h { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .bar-h .bar { height: 18px; border-radius: 3px; min-width: 2px; }
+  .bar-h .bar-label { font-size: 12px; width: 60px; text-align: right; flex-shrink: 0; }
+  .bar-h .bar-name { font-size: 13px; width: 120px; flex-shrink: 0; }
+  .footer { text-align: center; padding: 24px; font-size: 12px; color: var(--dim); }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .dual-chart { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 768px) { .dual-chart { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>US Federal Debt Dynamics <span>24,997 records from Treasury API, 1790-2026</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/uk-grid-decarb" id="grid-link">UK Grid</a>
+    <a href="/ocean-warming" id="ocean-link">Ocean Warming</a>
+    <a href="/solar-cycles" id="solar-link">Solar Cycles</a>
+  </div>
+</div>
+
+<div class="container">
+  <div id="content">
+    <div class="loading">Loading US Debt Dynamics data...</div>
+  </div>
+</div>
+
+<div class="footer">
+  Data: <a href="https://fiscaldata.treasury.gov/" target="_blank">US Treasury Fiscal Data API</a> |
+  <a href="#" id="report-link">Full Report</a>
+</div>
+
+<script>
+const TK = '__TOKEN__';
+function ap(u) { const x = new URL(u, location.origin); if (TK) x.searchParams.set('token', TK); return x.toString(); }
+document.getElementById('home-link').href = ap('/');
+document.getElementById('grid-link').href = ap('/uk-grid-decarb');
+document.getElementById('ocean-link').href = ap('/ocean-warming');
+document.getElementById('solar-link').href = ap('/solar-cycles');
+
+async function load() {
+  try {
+    const r = await fetch(ap('/api/us-debt-dynamics/summary'));
+    if (!r.ok) throw new Error('API returned ' + r.status);
+    const d = await r.json();
+    render(d);
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="error">Failed to load data: ' + e.message + '</div>';
+  }
+}
+
+function render(d) {
+  const h = d.headline_stats || {};
+  const refi = d.refinancing || {};
+  const comp = d.composition || {};
+
+  if (d.report_path) {
+    document.getElementById('report-link').href = ap('/api/file?path=' + encodeURIComponent(d.report_path));
+  }
+
+  let html = '';
+
+  // === Stats Grid ===
+  html += '<div class="stats-grid">';
+  html += sc('Total Debt', '$' + h.current_debt_tril + 'T', 'as of Jan 2026', 'red');
+  html += sc('Blended Rate', h.blended_rate_pct + '%', 'up from ' + h.blended_rate_trough_pct + '% (2022)', 'yellow');
+  html += sc('Interest Cost', '$' + h.interest_bil + 'B', 'FY2025 estimate', 'red');
+  html += sc('Interest/GDP', h.interest_to_gdp_pct + '%', '18.5% of revenue', 'yellow');
+  html += sc('vs Defense', h.interest_to_defense_ratio?.toFixed(2) + 'x', 'crossed in FY' + h.defense_crossover_year, 'red');
+  html += sc('No Decline Since', h.last_decline_year, h.years_since_debt_declined + ' consecutive years', 'purple');
+  html += sc('Pre-1981 Declines', h.decline_years_pre1981_pct + '%', 'of years saw debt fall', 'green');
+  html += sc('Post-1981 Declines', h.decline_years_post1981_pct + '%', '0 of 44 years', 'red');
+  html += '</div>';
+
+  // === Blended Rate Chart ===
+  html += '<div class="section"><div class="section-header open" onclick="toggleSection(this)">Blended Interest Rate (2001-2026) <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body open">';
+  html += '<div class="finding">Rate fell from <strong>6.61%</strong> (2001) to <strong>1.35%</strong> (2022) over 21 years, then rose to <strong>3.18%</strong> (2026) in 4 years as ZIRP-era debt reprices.</div>';
+
+  if (d.blended_rate_series || d.blended_rate_full) {
+    const series = d.blended_rate_full || d.blended_rate_series || {};
+    const entries = Object.entries(series).sort((a,b) => a[0].localeCompare(b[0]));
+    const maxR = Math.max(...entries.map(e => e[1]));
+    html += '<div class="chart-area">';
+    entries.forEach(([date, rate]) => {
+      const pct = (rate / maxR * 100);
+      const yr = date.slice(0, 4);
+      const hue = 120 * (1 - rate / maxR);
+      html += '<div class="chart-bar" style="height:' + pct + '%;background:hsl(' + hue + ',60%,45%)" title="' + date + ': ' + rate.toFixed(2) + '%">';
+      if (entries.length <= 30) {
+        html += '<span class="val">' + rate.toFixed(1) + '</span>';
+        html += '<span class="yr">' + yr + '</span>';
+      }
+      html += '</div>';
+    });
+    html += '</div><div style="height:24px"></div>';
+  }
+  html += '</div></div>';
+
+  // === Debt Composition ===
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Debt Composition by Security Type <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body">';
+  html += '<div class="finding">Notes dominate at <strong>53%</strong> of outstanding debt. Their 2-10 year maturities mean ZIRP-era issuance is still repricing upward.</div>';
+  const colors = { Bills: 'var(--accent)', Notes: 'var(--green)', Bonds: 'var(--yellow)', TIPS: 'var(--purple)' };
+  for (const [type, info] of Object.entries(comp)) {
+    html += '<div class="bar-h">';
+    html += '<div class="bar-name">' + type + '</div>';
+    html += '<div class="bar" style="width:' + (info.share * 2) + 'px;background:' + (colors[type] || 'var(--dim)') + '"></div>';
+    html += '<div class="bar-label">' + info.share + '% @ ' + info.rate + '%</div>';
+    html += '</div>';
+  }
+  html += '</div></div>';
+
+  // === Refinancing Wall ===
+  html += '<div class="section"><div class="section-header open" onclick="toggleSection(this)">The Refinancing Wall — More Nuanced Than Headlines <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body open">';
+  html += '<div class="finding good">Net refinancing effect is <strong>-$' + Math.abs(refi.net_annual_effect_bil) + 'B/year</strong> (savings, not costs) at current rates. Bond savings (-$' + Math.abs(refi.bonds_savings_bil) + 'B) more than offset Notes pressure (+$' + refi.notes_additional_bil + 'B).</div>';
+  html += '<div class="finding warn">But if rates rise 100bp, the net flips to <strong>+$' + refi.sensitivity_up_100bp + 'B/year</strong> in additional costs.</div>';
+
+  html += '<table><thead><tr><th>Type</th><th>ZIRP Rate</th><th>Current Rate</th><th>ZIRP Remaining</th><th>Annual Effect</th></tr></thead><tbody>';
+  html += '<tr><td>Bills</td><td>0.56%</td><td>3.76%</td><td>0% (done)</td><td style="color:var(--dim)">$0B</td></tr>';
+  html += '<tr><td>Notes</td><td>2.08%</td><td>3.17%</td><td>' + refi.notes_zirp_remaining_pct + '%</td><td style="color:var(--red)">+$' + refi.notes_additional_bil + 'B</td></tr>';
+  html += '<tr><td>Bonds</td><td>4.82%</td><td>3.37%</td><td>' + refi.bonds_zirp_remaining_pct + '%</td><td style="color:var(--green)">-$' + Math.abs(refi.bonds_savings_bil) + 'B</td></tr>';
+  html += '<tr><td>TIPS</td><td>1.19%</td><td>0.98%</td><td>60%</td><td style="color:var(--green)">-$' + Math.abs(refi.tips_savings_bil) + 'B</td></tr>';
+  html += '<tr style="font-weight:600"><td>Net</td><td colspan="3"></td><td style="color:var(--green)">-$' + Math.abs(refi.net_annual_effect_bil) + 'B</td></tr>';
+  html += '</tbody></table>';
+
+  html += '<div style="margin-top:16px"><strong>Rate Sensitivity:</strong></div>';
+  html += '<table><thead><tr><th>Scenario</th><th>Net Effect</th></tr></thead><tbody>';
+  html += '<tr><td>Rates -100bp</td><td style="color:var(--green)">-$' + Math.abs(refi.sensitivity_down_100bp) + 'B (savings)</td></tr>';
+  html += '<tr><td>Rates unchanged</td><td style="color:var(--green)">-$' + Math.abs(refi.sensitivity_unchanged) + 'B (savings)</td></tr>';
+  html += '<tr><td>Rates +100bp</td><td style="color:var(--red)">+$' + refi.sensitivity_up_100bp + 'B (costs)</td></tr>';
+  html += '</tbody></table>';
+  html += '</div></div>';
+
+  // === Interest vs Defense ===
+  html += '<div class="section"><div class="section-header open" onclick="toggleSection(this)">Interest vs Defense Spending <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body open">';
+  html += '<div class="finding danger">Interest exceeded defense in <strong>FY2024</strong>: $881B vs $874B (margin: $7B). FY2025: $970B interest vs $917B defense.</div>';
+
+  if (d.interest_trajectory) {
+    const traj = d.interest_trajectory;
+    const maxVal = Math.max(...traj.map(t => Math.max(t.interest, t.defense)));
+    html += '<div style="margin-top:16px">';
+    traj.forEach(t => {
+      const iPct = (t.interest / maxVal * 100);
+      const dPct = (t.defense / maxVal * 100);
+      html += '<div style="display:flex;align-items:center;gap:8px;margin:6px 0">';
+      html += '<span style="width:40px;font-size:12px;color:var(--dim);text-align:right">' + t.year + '</span>';
+      html += '<div style="flex:1;position:relative;height:24px">';
+      html += '<div style="position:absolute;top:0;left:0;height:11px;width:' + iPct + '%;background:var(--red);border-radius:3px;opacity:0.8" title="Interest: $' + t.interest + 'B"></div>';
+      html += '<div style="position:absolute;top:13px;left:0;height:11px;width:' + dPct + '%;background:var(--accent);border-radius:3px;opacity:0.6" title="Defense: $' + t.defense + 'B"></div>';
+      html += '</div>';
+      html += '<span style="width:90px;font-size:11px;color:var(--dim)">$' + t.interest + 'B / $' + t.defense + 'B</span>';
+      html += '</div>';
+    });
+    html += '<div style="font-size:11px;color:var(--dim);margin-top:8px"><span style="color:var(--red)">&#9632;</span> Interest &nbsp; <span style="color:var(--accent)">&#9632;</span> Defense</div>';
+    html += '</div>';
+  }
+  html += '</div></div>';
+
+  // === Forward Projection ===
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Forward Projection (2026-2035) <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body">';
+  html += '<div class="finding danger">At current trajectory: interest hits <strong>$2.1T by 2030</strong> (5.7% GDP) and <strong>$3.4T by 2035</strong> (7.5% GDP).</div>';
+  if (d.projection) {
+    html += '<table><thead><tr><th>Year</th><th>Debt</th><th>Eff. Rate</th><th>Interest</th><th>Interest/GDP</th></tr></thead><tbody>';
+    d.projection.forEach(p => {
+      html += '<tr><td>' + p.year + '</td><td>$' + p.debt_tril + 'T</td><td>' + p.rate_pct + '%</td><td>$' + p.interest_bil.toLocaleString() + 'B</td><td>' + p.gdp_pct + '%</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div></div>';
+
+  // === Historical 236-Year Record ===
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">236 Years: The Structural Break of 1981 <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body">';
+  html += '<div class="finding danger">The last year US debt declined was <strong>1957</strong> — 68 years ago. Before 1981, debt fell in 41% of years. Since 1981: <strong>zero</strong>.</div>';
+  if (d.historical_milestones) {
+    html += '<table><thead><tr><th>Year</th><th>Event</th><th>Debt</th></tr></thead><tbody>';
+    d.historical_milestones.forEach(m => {
+      const debt = m.debt_bil >= 1000 ? '$' + (m.debt_bil / 1000).toFixed(1) + 'T' : m.debt_bil >= 1 ? '$' + m.debt_bil.toFixed(1) + 'B' : '$' + (m.debt_bil * 1000).toFixed(0) + 'M';
+      html += '<tr><td>' + m.year + '</td><td>' + m.event + '</td><td>' + debt + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Doubling times
+  if (d.doubling_times) {
+    html += '<div style="margin-top:16px"><strong>Debt Doubling Times:</strong></div>';
+    html += '<table><thead><tr><th>Era</th><th>Period</th><th>Doubling Time</th></tr></thead><tbody>';
+    d.doubling_times.forEach(dt => {
+      const color = dt.years < 10 ? 'var(--red)' : dt.years < 15 ? 'var(--yellow)' : 'var(--green)';
+      html += '<tr><td>' + dt.era + '</td><td>' + dt.period + '</td><td style="color:' + color + '">' + dt.years + ' years</td></tr>';
+    });
+    html += '</tbody></table>';
+    html += '<div style="font-size:12px;color:var(--dim);margin-top:8px">Post-1981 doubling time remarkably stable at 8-9 years regardless of conditions.</div>';
+  }
+  html += '</div></div>';
+
+  // === Interest Growth Periods ===
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Interest Cost Growth Rates <span class="arrow">&#9654;</span></div>';
+  html += '<div class="section-body">';
+  html += '<div class="finding">During ZIRP (2008-2015), interest <em>fell</em> despite debt tripling. The bill is now due: <strong>+26.9% CAGR</strong> since 2022.</div>';
+  if (d.growth_periods) {
+    html += '<table><thead><tr><th>Period</th><th>Years</th><th>CAGR</th></tr></thead><tbody>';
+    d.growth_periods.forEach(gp => {
+      const color = gp.cagr > 10 ? 'var(--red)' : gp.cagr > 0 ? 'var(--yellow)' : 'var(--green)';
+      html += '<tr><td>' + gp.name + '</td><td>' + gp.start + '-' + gp.end + '</td><td style="color:' + color + '">' + (gp.cagr > 0 ? '+' : '') + gp.cagr + '%</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div></div>';
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function sc(label, value, sub, cls) {
+  return '<div class="stat-card"><div class="label">' + label + '</div><div class="value ' + (cls||'') + '">' + value + '</div><div class="sub">' + (sub||'') + '</div></div>';
+}
+
+function toggleSection(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ocean Warming — 155 Years of SST Analysis</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --purple: #bc8cff; --cyan: #39d2c0; --pink: #f778ba; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header h1 span { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .header-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .header-nav a { font-size: 12px; color: var(--accent); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; }
+  .header-nav a:hover { background: rgba(88,166,255,0.1); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .loading { text-align: center; padding: 60px; color: var(--dim); }
+  .error { text-align: center; padding: 60px; color: var(--red); }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-card .value { font-size: 22px; font-weight: 600; color: var(--accent); }
+  .stat-card .value.warm { color: var(--red); }
+  .stat-card .value.cool { color: var(--cyan); }
+  .stat-card .value.enso { color: var(--yellow); }
+  .stat-card .sub { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-header { padding: 14px 18px; font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .section-header:hover { background: rgba(88,166,255,0.04); }
+  .section-header .arrow { color: var(--dim); transition: transform 0.2s; }
+  .section-header.open .arrow { transform: rotate(90deg); }
+  .section-body { padding: 18px; display: none; }
+  .section-body.open { display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .finding { padding: 10px 14px; background: rgba(88,166,255,0.06); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; }
+  .bar-container { display: flex; align-items: center; gap: 8px; }
+  .bar { height: 16px; border-radius: 3px; min-width: 2px; }
+  .bar.warm { background: linear-gradient(90deg, var(--yellow), var(--red)); }
+  .bar.cool { background: linear-gradient(90deg, var(--cyan), var(--accent)); }
+  .bar.enso { background: var(--yellow); }
+  .accel-chart { display: flex; align-items: flex-end; gap: 4px; height: 100px; padding: 8px 0; }
+  .accel-bar { flex: 1; border-radius: 3px 3px 0 0; position: relative; min-height: 2px; }
+  .accel-bar .decade-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--dim); white-space: nowrap; }
+  .footer { text-align: center; padding: 24px; font-size: 12px; color: var(--dim); }
+  .footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Ocean Warming <span>155 Years of Global SST from HadISST (1870-2025)</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/solar-cycles" id="solar-link">Solar Cycles</a>
+    <a href="/sea-level" id="sl-link">Sea Level</a>
+    <a href="/exoplanet-census" id="exo-link">Exoplanets</a>
+    <a href="/climate" id="climate-link">Climate</a>
+  </div>
+</div>
+<div class="container">
+  <div id="loading" class="loading">Loading ocean warming data...</div>
+  <div id="content" style="display:none">
+    <div id="findings"></div>
+    <div class="stats-grid" id="stats"></div>
+    <div id="sections"></div>
+  </div>
+</div>
+<div class="footer">
+  Data from <a href="https://coastwatch.pfeg.noaa.gov/erddap/" target="_blank">ERDDAP HadISST</a> |
+  <a href="/output/research/ocean-warming/report.md" id="report-link">Full Report</a>
+</div>
+<script>
+const TK='__TOKEN__';
+function ap(url){const u=new URL(url,location.origin);if(TK)u.searchParams.set('token',TK);return u.toString();}
+document.getElementById('home-link').href=ap('/');
+document.getElementById('solar-link').href=ap('/solar-cycles');
+document.getElementById('sl-link').href=ap('/sea-level');
+document.getElementById('exo-link').href=ap('/exoplanet-census');
+document.getElementById('climate-link').href=ap('/climate');
+document.getElementById('report-link').href=ap('/view/output/research/ocean-warming/report.md');
+
+async function load(){
+  try{
+    const r=await fetch(ap('/api/ocean-warming/summary'));
+    if(!r.ok) throw new Error('API error '+r.status);
+    const d=await r.json();
+    render(d);
+  }catch(e){
+    document.getElementById('loading').innerHTML='<div class="error">Failed to load: '+e.message+'</div>';
+  }
+}
+
+function render(d){
+  document.getElementById('loading').style.display='none';
+  document.getElementById('content').style.display='block';
+  const km=d.key_metrics;
+
+  // Findings
+  const fHtml=d.findings.map(f=>'<div class="finding">'+esc(f)+'</div>').join('');
+  document.getElementById('findings').innerHTML=fHtml;
+
+  // Stats cards
+  document.getElementById('stats').innerHTML=`
+    <div class="stat-card"><div class="label">Global Warming</div><div class="value warm">+${km.global_total_change.toFixed(2)}&deg;C</div><div class="sub">${km.global_warming_rate.toFixed(3)}&deg;C/decade (1870-2025)</div></div>
+    <div class="stat-card"><div class="label">Fastest Basin</div><div class="value warm">${km.fastest_basin}</div><div class="sub">+${km.fastest_basin_rate.toFixed(3)}&deg;C/decade</div></div>
+    <div class="stat-card"><div class="label">Post-1980 Rate</div><div class="value warm">+${km.post_1980_rate.toFixed(3)}&deg;C/decade</div><div class="sub">${km.acceleration_factor}&times; pre-1950 rate</div></div>
+    <div class="stat-card"><div class="label">ENSO Period</div><div class="value enso">${km.enso_period.toFixed(2)} yr</div><div class="sub">&plusmn;${km.enso_period_std.toFixed(2)} yr (4-method consensus)</div></div>
+    <div class="stat-card"><div class="label">ENSO Events</div><div class="value enso">${km.el_nino_count+km.la_nina_count}</div><div class="sub">${km.el_nino_count} El Ni&ntilde;o + ${km.la_nina_count} La Ni&ntilde;a</div></div>
+    <div class="stat-card"><div class="label">Strongest El Ni&ntilde;o</div><div class="value warm">${km.strongest_el_nino_year}</div><div class="sub">Peak +${km.strongest_el_nino_anomaly.toFixed(1)}&deg;C anomaly</div></div>
+    <div class="stat-card"><div class="label">Acceleration</div><div class="value warm">+${km.acceleration_coeff.toFixed(4)}</div><div class="sub">&deg;C/decade&sup2; (p&lt;0.001)</div></div>
+    <div class="stat-card"><div class="label">Southern Ocean</div><div class="value cool">${km.southern_ocean_post1980.toFixed(3)}&deg;C/dec</div><div class="sub">Antarctic paradox (cooling)</div></div>
+  `;
+
+  // Sections
+  let sec='';
+
+  // Basin ranking
+  sec+=section('Basin Warming Rankings (1870-2025)', true, ()=>{
+    const maxR=Math.max(...d.basin_ranking.map(b=>Math.abs(b.rate)));
+    let rows=d.basin_ranking.map(b=>{
+      const w=Math.max(2,Math.abs(b.rate)/maxR*200);
+      const cls=b.rate>=0?'warm':'cool';
+      return `<tr><td style="font-weight:600">${b.rank}</td><td>${b.basin}</td>
+        <td><div class="bar-container"><div class="bar ${cls}" style="width:${w}px"></div><span style="font-size:12px">${b.rate>=0?'+':''}${b.rate.toFixed(3)}</span></div></td>
+        <td>${b.total_change>=0?'+':''}${b.total_change.toFixed(2)}&deg;C</td></tr>`;
+    }).join('');
+    return `<table><tr><th>#</th><th>Basin</th><th>&deg;C/decade</th><th>Total</th></tr>${rows}</table>`;
+  });
+
+  // Acceleration
+  sec+=section('Warming Acceleration by Period', false, ()=>{
+    const ap=d.acceleration_by_period;
+    const periods=['pre_1950','post_1950','post_1980','post_2000'];
+    const labels=['Pre-1950','Post-1950','Post-1980','Post-2000'];
+    const vals=periods.map(p=>ap[p]);
+    const maxV=Math.max(...vals.map(Math.abs));
+    let rows='';
+    periods.forEach((p,i)=>{
+      const v=ap[p];
+      const w=Math.max(2,Math.abs(v)/maxV*200);
+      rows+=`<tr><td style="font-weight:600">${labels[i]}</td>
+        <td><div class="bar-container"><div class="bar warm" style="width:${w}px"></div>
+        <span style="font-size:12px">${v>=0?'+':''}${v.toFixed(3)}</span></div></td></tr>`;
+    });
+    return `<p style="margin-bottom:12px;font-size:13px;color:var(--dim)">Global Ocean warming rate (&deg;C/decade) across different time periods:</p>
+      <table><tr><th>Period</th><th>Rate (&deg;C/decade)</th></tr>${rows}</table>`;
+  });
+
+  // ENSO
+  sec+=section('ENSO Spectral Consensus', false, ()=>{
+    const c=d.enso_consensus;
+    let rows=Object.entries(c.methods).map(([m,p])=>
+      `<tr><td>${m}</td><td>${p.toFixed(2)} yr</td></tr>`
+    ).join('');
+    rows+=`<tr style="font-weight:600;border-top:2px solid var(--border)"><td>Consensus</td><td>${c.consensus_period_yr.toFixed(2)} &plusmn; ${c.consensus_std_yr.toFixed(2)} yr</td></tr>`;
+    return `<table><tr><th>Method</th><th>Dominant Period</th></tr>${rows}</table>`;
+  });
+
+  // Ocean vs Atmosphere
+  if(d.ocean_atmosphere){
+    const oa=d.ocean_atmosphere;
+    sec+=section('Ocean vs. Atmosphere Warming', false, ()=>{
+      return `<table>
+        <tr><th>Medium</th><th>Rate (&deg;C/decade)</th></tr>
+        <tr><td>Global Ocean (SST)</td><td>+${oa.ocean_rate.toFixed(3)}</td></tr>
+        <tr><td>European Atmosphere (${oa.atmosphere_cities} cities)</td><td>+${oa.atmosphere_rate.toFixed(3)}</td></tr>
+        <tr style="font-weight:600;border-top:2px solid var(--border)"><td>Atmosphere/Ocean Ratio</td><td>${oa.ratio}&times;</td></tr>
+      </table>
+      <p style="margin-top:12px;font-size:13px;color:var(--dim)">The atmosphere warms ${oa.ratio}&times; faster than the ocean surface due to the ocean's enormous thermal inertia (~1,000&times; the heat capacity of the atmosphere).</p>`;
+    });
+  }
+
+  document.getElementById('sections').innerHTML=sec;
+
+  // Wire up toggles
+  document.querySelectorAll('.section-header').forEach(h=>{
+    h.onclick=()=>{
+      h.classList.toggle('open');
+      h.nextElementSibling.classList.toggle('open');
+    };
+  });
+}
+
+function section(title,open,contentFn){
+  return `<div class="section">
+    <div class="section-header ${open?'open':''}"><span>${title}</span><span class="arrow">&#9654;</span></div>
+    <div class="section-body ${open?'open':''}">${contentFn()}</div>
+  </div>`;
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+load();
+</script>
+</body>
+</html>

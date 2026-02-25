@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COVID-19 Attention Analysis</title>
+<style>
+  :root { --bg:#0d1117; --surface:#161b22; --border:#30363d; --text:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149; --orange:#d29922; --purple:#bc8cff; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  .header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .header h1 { font-size:18px; font-weight:600; }
+  .header h1 span { color:var(--dim); font-weight:400; }
+  .header-nav { display:flex; gap:8px; }
+  .header-nav a { font-size:12px; padding:4px 10px; border:1px solid var(--border); border-radius:6px; }
+
+  .container { max-width:1200px; margin:0 auto; padding:24px; }
+
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .stat-card .label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .stat-card .value { font-size:24px; font-weight:600; }
+  .stat-card .value.neg { color:var(--red); }
+  .stat-card .value.pos { color:var(--green); }
+  .stat-card .value.neutral { color:var(--accent); }
+  .stat-card .note { font-size:11px; color:var(--dim); margin-top:4px; }
+
+  .section { margin-bottom:32px; }
+  .section h2 { font-size:16px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .section h2 span { color:var(--dim); font-weight:400; font-size:13px; }
+
+  .insight { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:6px; padding:12px 16px; margin-bottom:16px; font-size:13px; line-height:1.6; }
+  .insight strong { color:var(--accent); }
+
+  /* Distribution bars */
+  .dist-chart { display:flex; gap:2px; height:32px; border-radius:6px; overflow:hidden; margin-bottom:8px; }
+  .dist-bar { display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; transition:0.2s; cursor:default; }
+  .dist-bar:hover { filter:brightness(1.2); }
+  .dist-legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .dist-legend-item { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--dim); }
+  .dist-legend-dot { width:10px; height:10px; border-radius:2px; }
+
+  /* Field chart */
+  .field-chart { display:flex; flex-direction:column; gap:4px; }
+  .field-bar { display:flex; align-items:center; gap:8px; height:24px; }
+  .field-bar .fname { width:200px; font-size:11px; text-align:right; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
+  .field-bar .bar-container { flex:1; position:relative; height:16px; }
+  .field-bar .bar-bg { position:absolute; top:0; left:0; right:0; bottom:0; background:var(--surface); border:1px solid var(--border); border-radius:3px; }
+  .field-bar .bar-center { position:absolute; top:0; bottom:0; left:50%; width:1px; background:var(--dim); opacity:0.3; }
+  .field-bar .bar-fill { position:absolute; top:2px; bottom:2px; border-radius:2px; }
+  .field-bar .bar-fill.positive { background:var(--green); }
+  .field-bar .bar-fill.negative { background:var(--red); }
+  .field-bar .val { width:60px; font-size:11px; font-family:monospace; }
+  .field-bar .cnt { width:30px; font-size:10px; color:var(--dim); text-align:right; }
+
+  /* Tables */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:8px 10px; color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); }
+  td { padding:8px 10px; border-bottom:1px solid var(--border); }
+  tr:hover td { background:rgba(88,166,255,0.04); }
+  .pos-val { color:var(--green); font-weight:600; }
+  .neg-val { color:var(--red); font-weight:600; }
+  .num { text-align:right; font-family:monospace; font-size:12px; }
+  .trunc { max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .align-tag { font-size:10px; padding:2px 6px; border-radius:3px; font-weight:600; text-transform:uppercase; }
+  .align-tag.permanent_shift { background:rgba(63,185,80,0.15); color:var(--green); }
+  .align-tag.science_continues { background:rgba(88,166,255,0.15); color:var(--accent); }
+  .align-tag.flash_event { background:rgba(210,153,34,0.15); color:var(--orange); }
+  .align-tag.lingering_interest { background:rgba(188,140,255,0.15); color:var(--purple); }
+
+  /* Alignment matrix */
+  .matrix { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .matrix-cell { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; text-align:center; }
+  .matrix-cell .mc-count { font-size:28px; font-weight:700; margin-bottom:4px; }
+  .matrix-cell .mc-pct { font-size:12px; color:var(--dim); margin-bottom:8px; }
+  .matrix-cell .mc-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .matrix-cell .mc-desc { font-size:11px; color:var(--dim); line-height:1.4; }
+
+  .loading { text-align:center; padding:48px; color:var(--dim); }
+  .error { text-align:center; padding:48px; color:var(--red); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>COVID-19 Attention Analysis <span>| Did the pandemic permanently change public engagement with science?</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/attention-gap" id="gap-link">Attention Gap</a>
+    <a href="/climate" id="climate-link">Climate Trends</a>
+  </div>
+</div>
+<div class="container" id="content">
+  <div class="loading" id="loading">Loading COVID attention data...</div>
+</div>
+
+<script>
+const TK='__TOKEN__';
+function ap(url){const u=new URL(url,location.origin);if(TK)u.searchParams.set('token',TK);return u.toString();}
+document.getElementById('home-link').href=ap('/');
+document.getElementById('gap-link').href=ap('/attention-gap');
+document.getElementById('climate-link').href=ap('/climate');
+
+async function init(){
+  try {
+    const r = await fetch(ap('/api/covid-attention/summary'));
+    if(!r.ok) throw new Error('API returned ' + r.status);
+    const d = await r.json();
+    render(d);
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<div class="error">Failed to load data: '+e.message+'</div>';
+  }
+}
+
+function render(d) {
+  const total = d.topicsAnalyzed;
+  const att = d.attention;
+  const ali = d.alignment;
+
+  // Colors for distribution
+  const attColors = { declined:'var(--red)', snapped_back:'var(--orange)', partially_retained:'var(--accent)', retained:'var(--green)' };
+  const attLabels = { declined:'Declined (<-10%)', snapped_back:'Snapped Back', partially_retained:'Partially Retained', retained:'Retained (>+50%)' };
+  const aliColors = { flash_event:'var(--orange)', science_continues:'var(--accent)', permanent_shift:'var(--green)', lingering_interest:'var(--purple)' };
+  const aliLabels = { flash_event:'Flash Event', science_continues:'Science Continues', permanent_shift:'Permanent Shift', lingering_interest:'Lingering Interest' };
+
+  let html = '';
+
+  // Key stats
+  html += '<div class="stats-row">';
+  html += statCard('Topics Analyzed', total, 'neutral', d.uniqueArticles + ' unique articles');
+  html += statCard('Median Dividend', (d.medianDividend > 0 ? '+' : '') + d.medianDividend.toFixed(1) + '%', d.medianDividend < 0 ? 'neg' : 'pos', 'Post vs. pre-COVID attention');
+  html += statCard('Mean Peak Ratio', d.meanPeakRatio.toFixed(1) + 'x', 'neutral', 'Peak vs. baseline attention');
+  html += statCard('Median Half-Life', d.medianHalfLife + ' month', 'neg', 'Time for attention to halve');
+  html += statCard('Declined', att.declined, 'neg', ((att.declined/total)*100).toFixed(0) + '% of topics');
+  html += statCard('Retained', (att.retained + att.partially_retained), 'pos', (((att.retained + att.partially_retained)/total)*100).toFixed(0) + '% of topics');
+  html += '</div>';
+
+  // Key finding
+  html += '<div class="insight"><strong>Key Finding:</strong> COVID-19 did not permanently increase public engagement with science. ' +
+    ((att.declined/total)*100).toFixed(0) + '% of COVID-adjacent topics declined below pre-pandemic Wikipedia attention levels. ' +
+    'The median topic lost ' + Math.abs(d.medianDividend).toFixed(0) + '% of its pre-COVID attention. ' +
+    'Attention decay was rapid: median half-life of just ' + d.medianHalfLife + ' month from peak.</div>';
+
+  // Attention distribution
+  html += '<div class="section"><h2>Attention Trajectory Distribution <span>' + total + ' topics</span></h2>';
+  html += distChart(att, attColors, attLabels, total);
+  html += '</div>';
+
+  // Alignment matrix
+  html += '<div class="section"><h2>Science-Attention Alignment <span>Did research and public interest move together?</span></h2>';
+  html += '<div class="matrix">';
+  html += matrixCell(ali.permanent_shift || 0, total, 'Permanent Shift', 'Both science output and public attention increased lastingly', 'var(--green)');
+  html += matrixCell(ali.lingering_interest || 0, total, 'Lingering Interest', 'Public attention outlasted the research surge', 'var(--purple)');
+  html += matrixCell(ali.science_continues || 0, total, 'Science Continues', 'Researchers kept publishing, public moved on', 'var(--accent)');
+  html += matrixCell(ali.flash_event || 0, total, 'Flash Event', 'Both science and attention surged, then faded', 'var(--orange)');
+  html += '</div></div>';
+
+  // Top retained topics
+  html += '<div class="section"><h2>Topics That Retained Attention <span>Lasting COVID dividends</span></h2>';
+  if (d.retained.length === 0) {
+    html += '<p style="color:var(--dim)">No topics retained significant attention.</p>';
+  } else {
+    html += '<table><tr><th>Topic</th><th>Field</th><th class="num">Dividend</th><th class="num">Peak</th><th>Alignment</th></tr>';
+    for (const t of d.retained) {
+      const dvClass = t.dividend > 0 ? 'pos-val' : 'neg-val';
+      html += '<tr><td class="trunc">' + esc(t.name) + '</td><td style="font-size:11px;color:var(--dim)">' + esc(t.field) + '</td>';
+      html += '<td class="num ' + dvClass + '">' + (t.dividend > 0 ? '+' : '') + t.dividend.toFixed(1) + '%</td>';
+      html += '<td class="num">' + t.peakRatio.toFixed(1) + 'x</td>';
+      html += '<td><span class="align-tag ' + t.alignment + '">' + t.alignment.replace(/_/g, ' ') + '</span></td></tr>';
+    }
+    html += '</table>';
+  }
+  html += '</div>';
+
+  // Top declined topics
+  html += '<div class="section"><h2>Topics That Declined Most <span>Below pre-COVID baseline</span></h2>';
+  html += '<table><tr><th>Topic</th><th>Field</th><th class="num">Dividend</th><th class="num">Peak</th><th class="num">Half-Life</th><th>Alignment</th></tr>';
+  for (const t of d.declined) {
+    html += '<tr><td class="trunc">' + esc(t.name) + '</td><td style="font-size:11px;color:var(--dim)">' + esc(t.field) + '</td>';
+    html += '<td class="num neg-val">' + t.dividend.toFixed(1) + '%</td>';
+    html += '<td class="num">' + t.peakRatio.toFixed(1) + 'x</td>';
+    html += '<td class="num">' + (t.halfLife !== null ? t.halfLife + 'mo' : '-') + '</td>';
+    html += '<td><span class="align-tag ' + t.alignment + '">' + t.alignment.replace(/_/g, ' ') + '</span></td></tr>';
+  }
+  html += '</table></div>';
+
+  // Field-level analysis
+  html += '<div class="section"><h2>COVID Dividend by Field <span>Average attention change by scientific field</span></h2>';
+  html += fieldChart(d.fieldStats);
+  html += '</div>';
+
+  // Methodology note
+  html += '<div class="insight"><strong>Methodology:</strong> ' +
+    'COVID-adjacent topics identified via keyword matching (62) and publication surge detection (118 with >50% increase in 2020-2021 vs 2018-2019). ' +
+    'Pre-COVID baseline: Jan 2019 - Feb 2020. Post-COVID: Jan 2023 - Dec 2024. ' +
+    'Attention measured via Wikipedia monthly pageviews. ' +
+    '<a href="' + ap('/api/file?path=/output/research/covid-attention/report.md') + '">Read the full report</a></div>';
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function statCard(label, value, cls, note) {
+  return '<div class="stat-card"><div class="label">' + label + '</div><div class="value ' + cls + '">' + value + '</div>' +
+    (note ? '<div class="note">' + note + '</div>' : '') + '</div>';
+}
+
+function distChart(data, colors, labels, total) {
+  let html = '<div class="dist-chart">';
+  for (const [key, count] of Object.entries(data)) {
+    const pct = (count / total * 100);
+    if (pct < 1) continue;
+    html += '<div class="dist-bar" style="width:' + pct + '%;background:' + (colors[key] || 'var(--dim)') + '">' +
+      (pct > 8 ? count : '') + '</div>';
+  }
+  html += '</div><div class="dist-legend">';
+  for (const [key, label] of Object.entries(labels)) {
+    const count = data[key] || 0;
+    html += '<div class="dist-legend-item"><div class="dist-legend-dot" style="background:' + (colors[key] || 'var(--dim)') + '"></div>' +
+      label + ' (' + count + ')</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function matrixCell(count, total, label, desc, color) {
+  const pct = (count / total * 100).toFixed(1);
+  return '<div class="matrix-cell"><div class="mc-count" style="color:' + color + '">' + count + '</div>' +
+    '<div class="mc-pct">' + pct + '%</div>' +
+    '<div class="mc-label" style="color:' + color + '">' + label + '</div>' +
+    '<div class="mc-desc">' + desc + '</div></div>';
+}
+
+function fieldChart(fields) {
+  if (!fields || fields.length === 0) return '<p style="color:var(--dim)">No field data available.</p>';
+  const maxAbs = Math.max(...fields.map(f => Math.abs(f.avgDividend)), 10);
+  let html = '<div class="field-chart">';
+  for (const f of fields) {
+    const pct = Math.abs(f.avgDividend) / maxAbs * 50;
+    const isPos = f.avgDividend >= 0;
+    const left = isPos ? '50%' : (50 - pct) + '%';
+    const width = pct + '%';
+    html += '<div class="field-bar">' +
+      '<div class="fname" title="' + esc(f.fullName) + '">' + esc(f.name) + '</div>' +
+      '<div class="bar-container"><div class="bar-bg"></div><div class="bar-center"></div>' +
+      '<div class="bar-fill ' + (isPos ? 'positive' : 'negative') + '" style="left:' + left + ';width:' + width + '"></div></div>' +
+      '<div class="val" style="color:' + (isPos ? 'var(--green)' : 'var(--red)') + '">' +
+      (isPos ? '+' : '') + f.avgDividend.toFixed(1) + '%</div>' +
+      '<div class="cnt">n=' + f.count + '</div></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+init();
+</script>
+</body>
+</html>

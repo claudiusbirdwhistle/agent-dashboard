@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State of Science 2024 — Trends Dashboard</title>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --red: #f85149; --yellow: #d29922; --purple: #bc8cff;
+  --orange: #d18616; --cyan: #39d2c0;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+header {
+  padding: 16px 24px; border-bottom: 1px solid var(--border);
+  background: var(--surface); display: flex; align-items: center; justify-content: space-between;
+}
+.logo { font-size: 16px; font-weight: 600; }
+.logo span { color: var(--dim); font-weight: 400; }
+.nav { display: flex; gap: 16px; font-size: 13px; }
+.kpi-row { display: flex; gap: 16px; padding: 20px 24px; flex-wrap: wrap; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+       padding: 16px 20px; flex: 1; min-width: 180px; }
+.kpi-val { font-size: 28px; font-weight: 700; color: var(--accent); }
+.kpi-label { font-size: 12px; color: var(--dim); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 24px 24px; }
+@media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 20px; overflow: hidden;
+}
+.card-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.card-title .tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+.tag-growth { background: rgba(63,185,80,0.15); color: var(--green); }
+.tag-geo { background: rgba(88,166,255,0.15); color: var(--accent); }
+.tag-cite { background: rgba(210,153,34,0.15); color: var(--yellow); }
+.tag-cross { background: rgba(188,140,255,0.15); color: var(--purple); }
+.tag-emerge { background: rgba(57,210,192,0.15); color: var(--cyan); }
+
+/* Horizontal bar charts */
+.bar-chart { display: flex; flex-direction: column; gap: 6px; }
+.bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.bar-label { width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; text-align: right; color: var(--dim); }
+.bar-track { flex: 1; height: 18px; background: var(--bg); border-radius: 3px; position: relative; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; min-width: 2px; }
+.bar-fill.positive { background: linear-gradient(90deg, rgba(63,185,80,0.6), rgba(63,185,80,0.3)); }
+.bar-fill.negative { background: linear-gradient(90deg, rgba(248,81,73,0.6), rgba(248,81,73,0.3)); }
+.bar-fill.blue { background: linear-gradient(90deg, rgba(88,166,255,0.6), rgba(88,166,255,0.3)); }
+.bar-fill.yellow { background: linear-gradient(90deg, rgba(210,153,34,0.6), rgba(210,153,34,0.3)); }
+.bar-fill.purple { background: linear-gradient(90deg, rgba(188,140,255,0.6), rgba(188,140,255,0.3)); }
+.bar-fill.cyan { background: linear-gradient(90deg, rgba(57,210,192,0.6), rgba(57,210,192,0.3)); }
+.bar-val { width: 70px; font-family: var(--mono); font-size: 11px; flex-shrink: 0; }
+.bar-val.pos { color: var(--green); }
+.bar-val.neg { color: var(--red); }
+
+/* Table */
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th { text-align: left; padding: 6px 8px; color: var(--dim); border-bottom: 1px solid var(--border);
+                  font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+.data-table td { padding: 6px 8px; border-bottom: 1px solid rgba(48,54,61,0.5); }
+.data-table tr:hover td { background: rgba(88,166,255,0.04); }
+.data-table .num { font-family: var(--mono); text-align: right; }
+.data-table .title-cell { max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.wide-card { grid-column: 1 / -1; }
+.loading { text-align: center; padding: 40px; color: var(--dim); }
+.error { text-align: center; padding: 40px; color: var(--red); }
+.footer { text-align: center; padding: 16px; color: var(--dim); font-size: 11px; border-top: 1px solid var(--border); margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">State of Science <span>2024</span></div>
+  <div class="nav">
+    <a href="/" id="back-link">Dashboard</a>
+    <span style="color:var(--dim)">Data: OpenAlex</span>
+  </div>
+</header>
+
+<div id="content"><div class="loading">Loading trends data...</div></div>
+
+<script>
+const TK='__TOKEN__';
+function ap(url){const u=new URL(url,location.origin);if(TK)u.searchParams.set('token',TK);return u.toString();}
+document.getElementById('back-link').href = TK ? '/?token='+encodeURIComponent(TK) : '/';
+
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function fmt(n){return n!=null?n.toLocaleString():'—';}
+function pct(n){return n!=null?(n*100).toFixed(1)+'%':'—';}
+
+function barChart(items, {labelKey, valueKey, maxVal, colorFn, fmtVal, labelWidth}) {
+  const mx = maxVal || Math.max(...items.map(i => Math.abs(i[valueKey] || 0)), 0.01);
+  const lw = labelWidth || 200;
+  return '<div class="bar-chart">' + items.map(item => {
+    const v = item[valueKey] || 0;
+    const w = Math.min(Math.abs(v) / mx * 100, 100);
+    const cls = colorFn ? colorFn(v) : (v >= 0 ? 'positive' : 'negative');
+    const valCls = v >= 0 ? 'pos' : 'neg';
+    const valStr = fmtVal ? fmtVal(v, item) : (v >= 0 ? '+' : '') + (v*100).toFixed(1) + '%';
+    return '<div class="bar-row">'
+      + '<span class="bar-label" style="width:'+lw+'px" title="'+esc(item[labelKey])+'">'+esc(item[labelKey])+'</span>'
+      + '<span class="bar-track"><span class="bar-fill '+cls+'" style="width:'+w.toFixed(1)+'%"></span></span>'
+      + '<span class="bar-val '+valCls+'">'+valStr+'</span></div>';
+  }).join('') + '</div>';
+}
+
+async function load() {
+  try {
+    const data = await (await fetch(ap('/api/sci-trends/summary'))).json();
+    if (data.error) { document.getElementById('content').innerHTML = '<div class="error">'+esc(data.error)+'</div>'; return; }
+    render(data);
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<div class="error">Failed to load: '+esc(e.message)+'</div>';
+  }
+}
+
+function render(d) {
+  let h = '';
+
+  // KPIs
+  h += '<div class="kpi-row">';
+  h += '<div class="kpi"><div class="kpi-val">'+fmt(d.globalWorks2024)+'</div><div class="kpi-label">Works Indexed (2024)</div></div>';
+  h += '<div class="kpi"><div class="kpi-val">'+d.fields.length+'</div><div class="kpi-label">Fields Tracked</div></div>';
+  h += '<div class="kpi"><div class="kpi-val">'+fmt(d.topicsTracked)+'</div><div class="kpi-label">Topics Analyzed</div></div>';
+  h += '<div class="kpi"><div class="kpi-val">'+fmt(d.countriesTracked)+'</div><div class="kpi-label">Countries</div></div>';
+  h += '</div>';
+
+  h += '<div class="grid">';
+
+  // Field growth chart
+  h += '<div class="card"><div class="card-title"><span class="tag tag-growth">Growth</span> Field Growth Rates (5yr CAGR, 2019-2024)</div>';
+  h += barChart(d.fields, {
+    labelKey: 'name', valueKey: 'cagr_5y',
+    fmtVal: (v) => (v >= 0 ? '+' : '') + (v*100).toFixed(1) + '%',
+    labelWidth: 220
+  });
+  h += '</div>';
+
+  // Top countries
+  h += '<div class="card"><div class="card-title"><span class="tag tag-geo">Geography</span> Top Research Nations (2024)</div>';
+  h += barChart(d.countries, {
+    labelKey: 'name', valueKey: 'works_2024',
+    maxVal: d.countries[0]?.works_2024 || 1,
+    colorFn: () => 'blue',
+    fmtVal: (v) => fmt(v),
+    labelWidth: 200
+  });
+  h += '</div>';
+
+  // Emerging topics
+  h += '<div class="card"><div class="card-title"><span class="tag tag-growth">Growth</span> Fastest-Growing Topics (5yr CAGR)</div>';
+  h += barChart(d.topGrowing, {
+    labelKey: 'name', valueKey: 'cagr',
+    maxVal: d.topGrowing[0]?.cagr || 1,
+    colorFn: () => 'positive',
+    fmtVal: (v) => (v*100).toFixed(0) + '%',
+    labelWidth: 220
+  });
+  h += '</div>';
+
+  // Rising nations
+  h += '<div class="card"><div class="card-title"><span class="tag tag-geo">Geography</span> Rising Research Nations (10yr CAGR)</div>';
+  h += barChart(d.rising, {
+    labelKey: 'name', valueKey: 'cagr_10y',
+    maxVal: d.rising[0]?.cagr_10y || 1,
+    colorFn: () => 'cyan',
+    fmtVal: (v, item) => (v*100).toFixed(0) + '% (+'+(item.rank_change||0)+' ranks)',
+    labelWidth: 160
+  });
+  h += '</div>';
+
+  // Citation intensity
+  h += '<div class="card"><div class="card-title"><span class="tag tag-cite">Citations</span> Mean Citations per 2023 Paper by Field</div>';
+  h += barChart(d.citationFields, {
+    labelKey: 'name', valueKey: 'mean',
+    maxVal: d.citationFields[0]?.mean || 1,
+    colorFn: () => 'yellow',
+    fmtVal: (v) => v.toFixed(1),
+    labelWidth: 220
+  });
+  h += '</div>';
+
+  // Cross-disciplinary
+  h += '<div class="card"><div class="card-title"><span class="tag tag-cross">Cross-Disciplinary</span> Most Interdisciplinary Topics (Shannon Entropy)</div>';
+  h += barChart(d.crossTopics, {
+    labelKey: 'name', valueKey: 'entropy_2024',
+    maxVal: 4.7,
+    colorFn: () => 'purple',
+    fmtVal: (v, item) => 'H='+v.toFixed(2)+' ('+item.field_count_2024+' fields)',
+    labelWidth: 220
+  });
+  h += '</div>';
+
+  // Most-cited works table
+  h += '<div class="card wide-card"><div class="card-title"><span class="tag tag-cite">Citations</span> Most-Cited Works of 2023</div>';
+  h += '<table class="data-table"><thead><tr><th>#</th><th>Title</th><th>Field</th><th>Authors</th><th class="num">Citations</th></tr></thead><tbody>';
+  d.topWorks.forEach((w, i) => {
+    h += '<tr><td class="num">'+(i+1)+'</td><td class="title-cell" title="'+esc(w.title)+'">'+esc(w.title)+'</td>'
+      + '<td>'+esc(w.field)+'</td><td>'+esc(w.authors)+'</td><td class="num">'+fmt(w.citations)+'</td></tr>';
+  });
+  h += '</tbody></table></div>';
+
+  // Newly emerged topics table
+  h += '<div class="card wide-card"><div class="card-title"><span class="tag tag-emerge">Emerged</span> Topics That Didn\'t Exist Before 2019</div>';
+  h += '<table class="data-table"><thead><tr><th>#</th><th>Topic</th><th>Field</th><th class="num">Works (2024)</th></tr></thead><tbody>';
+  d.emerged.forEach((t, i) => {
+    h += '<tr><td class="num">'+(i+1)+'</td><td>'+esc(t.name)+'</td><td>'+esc(t.field)+'</td><td class="num">'+fmt(t.works_2024)+'</td></tr>';
+  });
+  h += '</tbody></table></div>';
+
+  h += '</div>'; // end grid
+
+  h += '<div class="footer">Data source: <a href="https://openalex.org" target="_blank">OpenAlex</a> | '
+    + 'Generated: '+(d.generated||'unknown')+' | '
+    + '<a href="/api/file?path=/output/research/state-of-science-2024/report.md'+(TK?'&token='+encodeURIComponent(TK):'')+'" target="_blank">Full Report</a>'
+    + '</div>';
+
+  document.getElementById('content').innerHTML = h;
+}
+
+load();
+</script>
+</body>
+</html>

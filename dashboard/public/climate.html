@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Climate Trends</title>
+<style>
+  :root { --bg:#0d1117; --surface:#161b22; --border:#30363d; --text:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149; --orange:#d29922; --purple:#bc8cff; --cyan:#39d2c0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  .header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .header h1 { font-size:18px; font-weight:600; }
+  .header h1 span { color:var(--dim); font-weight:400; }
+  .header-nav { display:flex; gap:8px; }
+  .header-nav a { font-size:12px; padding:4px 10px; border:1px solid var(--border); border-radius:6px; }
+
+  .container { max-width:1200px; margin:0 auto; padding:24px; }
+  .preliminary-banner { background:rgba(210,153,34,0.12); border:1px solid rgba(210,153,34,0.3); border-radius:8px; padding:12px 16px; margin-bottom:24px; font-size:13px; color:var(--orange); }
+
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .stat-card .label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .stat-card .value { font-size:24px; font-weight:600; }
+  .stat-card .value.warm { color:var(--red); }
+  .stat-card .value.cool { color:var(--accent); }
+  .stat-card .value.neutral { color:var(--cyan); }
+  .stat-card .value.green { color:var(--green); }
+  .stat-card .note { font-size:11px; color:var(--dim); margin-top:4px; }
+
+  .section { margin-bottom:32px; }
+  .section h2 { font-size:16px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .section h2 span { color:var(--dim); font-weight:400; font-size:13px; }
+
+  /* Warming bar chart */
+  .warming-chart { display:flex; flex-direction:column; gap:4px; }
+  .warming-bar { display:flex; align-items:center; gap:8px; height:28px; }
+  .warming-bar .cname { width:120px; font-size:12px; text-align:right; color:var(--dim); white-space:nowrap; flex-shrink:0; }
+  .warming-bar .bar-container { flex:1; position:relative; height:20px; }
+  .warming-bar .bar-bg { position:absolute; top:0; left:0; right:0; bottom:0; background:var(--surface); border:1px solid var(--border); border-radius:3px; }
+  .warming-bar .bar-fill { position:absolute; top:2px; bottom:2px; left:0; border-radius:2px; transition:width 0.6s ease; }
+  .warming-bar .val { width:100px; font-size:12px; font-family:monospace; }
+  .warming-bar .total { width:70px; font-size:11px; color:var(--dim); text-align:right; }
+
+  /* Tables */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:8px 10px; color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); }
+  td { padding:8px 10px; border-bottom:1px solid var(--border); }
+  tr:hover td { background:rgba(88,166,255,0.04); }
+  .num { text-align:right; font-family:monospace; font-size:12px; }
+  .pos { color:var(--red); }
+  .neg { color:var(--accent); }
+  .sig { color:var(--green); font-weight:600; }
+  .nsig { color:var(--dim); }
+
+  /* Collection status */
+  .collection-bar { height:8px; background:var(--surface); border:1px solid var(--border); border-radius:4px; overflow:hidden; margin:8px 0; }
+  .collection-bar .fill { height:100%; background:var(--green); border-radius:4px; transition:width 0.6s ease; }
+
+  .loading { text-align:center; padding:60px; color:var(--dim); }
+  .error { text-align:center; padding:60px; color:var(--red); }
+
+  /* Map */
+  .map-container { width:100%; max-width:960px; margin:0 auto; }
+  .map-container svg { width:100%; height:auto; }
+  .map-legend { display:flex; gap:16px; justify-content:center; margin-top:12px; flex-wrap:wrap; font-size:12px; color:var(--dim); }
+  .map-legend-item { display:flex; align-items:center; gap:4px; }
+  .map-dot { display:inline-block; width:10px; height:10px; border-radius:50%; }
+
+  /* Tabs */
+  .tab-row { display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .tab-btn { padding:8px 16px; font-size:13px; color:var(--dim); background:none; border:none; cursor:pointer; border-bottom:2px solid transparent; }
+  .tab-btn:hover { color:var(--text); }
+  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Climate Trends <span>Multi-City Temperature Analysis</span></h1>
+  <div class="header-nav">
+    <a href="/" id="home-link">Dashboard</a>
+    <a href="/attention-gap" id="gap-link">Attention Gap</a>
+    <a href="/trends" id="trends-link">Science Trends</a>
+  </div>
+</div>
+
+<div class="container" id="content">
+  <div class="loading" id="loading">Loading climate data...</div>
+</div>
+
+<script>
+const TK='__TOKEN__';
+function ap(u){const x=new URL(u,location.origin);if(TK)x.searchParams.set('token',TK);return x.toString();}
+document.getElementById('home-link').href=ap('/');
+document.getElementById('gap-link').href=ap('/attention-gap');
+document.getElementById('trends-link').href=ap('/trends');
+
+const ALL_CITIES=[
+{n:"London",la:51.51,lo:-0.13,co:"Europe",cl:"Oceanic",p:9.0},
+{n:"Paris",la:48.86,lo:2.35,co:"Europe",cl:"Oceanic/Continental",p:11.0},
+{n:"Moscow",la:55.76,lo:37.62,co:"Europe",cl:"Humid continental",p:12.5},
+{n:"Madrid",la:40.42,lo:-3.70,co:"Europe",cl:"Mediterranean",p:6.7},
+{n:"Berlin",la:52.52,lo:13.41,co:"Europe",cl:"Oceanic/Continental",p:3.6},
+{n:"Rome",la:41.90,lo:12.50,co:"Europe",cl:"Mediterranean",p:4.3},
+{n:"Stockholm",la:59.33,lo:18.07,co:"Europe",cl:"Humid continental",p:1.6},
+{n:"Athens",la:37.98,lo:23.73,co:"Europe",cl:"Mediterranean",p:3.2},
+{n:"Istanbul",la:41.01,lo:28.98,co:"Europe",cl:"Mediterranean",p:15.6},
+{n:"Reykjavik",la:64.15,lo:-21.94,co:"Europe",cl:"Subpolar oceanic",p:0.2},
+{n:"Tokyo",la:35.68,lo:139.69,co:"Asia",cl:"Humid subtropical",p:37.4},
+{n:"Beijing",la:39.91,lo:116.40,co:"Asia",cl:"Humid continental",p:21.5},
+{n:"New Delhi",la:28.61,lo:77.21,co:"Asia",cl:"Semi-arid",p:32.9},
+{n:"Mumbai",la:19.08,lo:72.88,co:"Asia",cl:"Tropical monsoon",p:21.7},
+{n:"Shanghai",la:31.23,lo:121.47,co:"Asia",cl:"Humid subtropical",p:28.5},
+{n:"Singapore",la:1.35,lo:103.82,co:"Asia",cl:"Tropical rainforest",p:5.9},
+{n:"Dubai",la:25.27,lo:55.30,co:"Asia",cl:"Arid desert",p:3.6},
+{n:"Bangkok",la:13.76,lo:100.50,co:"Asia",cl:"Tropical savanna",p:10.7},
+{n:"Seoul",la:37.57,lo:126.98,co:"Asia",cl:"Humid continental",p:9.7},
+{n:"Jakarta",la:-6.17,lo:106.85,co:"Asia",cl:"Tropical rainforest",p:34.5},
+{n:"Riyadh",la:24.63,lo:46.72,co:"Asia",cl:"Arid desert",p:7.7},
+{n:"Ulaanbaatar",la:47.91,lo:106.91,co:"Asia",cl:"Continental extreme",p:1.5},
+{n:"Cairo",la:30.04,lo:31.24,co:"Africa",cl:"Arid desert",p:22.2},
+{n:"Lagos",la:6.52,lo:3.38,co:"Africa",cl:"Tropical savanna",p:15.9},
+{n:"Nairobi",la:-1.29,lo:36.82,co:"Africa",cl:"Subtropical highland",p:5.1},
+{n:"Johannesburg",la:-26.20,lo:28.05,co:"Africa",cl:"Subtropical highland",p:6.1},
+{n:"Casablanca",la:33.59,lo:-7.62,co:"Africa",cl:"Mediterranean",p:3.8},
+{n:"Addis Ababa",la:9.02,lo:38.75,co:"Africa",cl:"Subtropical highland",p:5.5},
+{n:"Kinshasa",la:-4.44,lo:15.27,co:"Africa",cl:"Tropical wet/dry",p:17.7},
+{n:"Dakar",la:14.69,lo:-17.44,co:"Africa",cl:"Semi-arid",p:3.9},
+{n:"New York",la:40.71,lo:-74.01,co:"North America",cl:"Humid subtropical",p:18.8},
+{n:"Los Angeles",la:34.05,lo:-118.24,co:"North America",cl:"Mediterranean",p:12.5},
+{n:"Chicago",la:41.88,lo:-87.63,co:"North America",cl:"Humid continental",p:8.6},
+{n:"Houston",la:29.76,lo:-95.37,co:"North America",cl:"Humid subtropical",p:7.1},
+{n:"Mexico City",la:19.43,lo:-99.13,co:"North America",cl:"Subtropical highland",p:21.8},
+{n:"Toronto",la:43.65,lo:-79.38,co:"North America",cl:"Humid continental",p:6.4},
+{n:"Miami",la:25.76,lo:-80.19,co:"North America",cl:"Tropical monsoon",p:6.1},
+{n:"Phoenix",la:33.45,lo:-112.07,co:"North America",cl:"Arid desert",p:4.9},
+{n:"São Paulo",la:-23.55,lo:-46.63,co:"South America",cl:"Humid subtropical",p:22.4},
+{n:"Buenos Aires",la:-34.60,lo:-58.38,co:"South America",cl:"Humid subtropical",p:15.5},
+{n:"Bogotá",la:4.71,lo:-74.07,co:"South America",cl:"Subtropical highland",p:11.3},
+{n:"Lima",la:-12.05,lo:-77.04,co:"South America",cl:"Arid coastal",p:11.0},
+{n:"Santiago",la:-33.45,lo:-70.65,co:"South America",cl:"Mediterranean",p:6.8},
+{n:"Rio de Janeiro",la:-22.91,lo:-43.17,co:"South America",cl:"Tropical savanna",p:13.6},
+{n:"Quito",la:-0.18,lo:-78.47,co:"South America",cl:"Subtropical highland",p:2.8},
+{n:"Sydney",la:-33.87,lo:151.21,co:"Oceania",cl:"Humid subtropical",p:5.4},
+{n:"Melbourne",la:-37.81,lo:144.96,co:"Oceania",cl:"Oceanic",p:5.0},
+{n:"Auckland",la:-36.85,lo:174.76,co:"Oceania",cl:"Oceanic",p:1.7},
+{n:"Perth",la:-31.95,lo:115.86,co:"Oceania",cl:"Mediterranean",p:2.1},
+{n:"Anchorage",la:61.22,lo:-149.90,co:"North America",cl:"Subarctic",p:0.3},
+{n:"Karachi",la:24.86,lo:67.01,co:"Asia",cl:"Arid coastal",p:16.8},
+{n:"Novosibirsk",la:55.01,lo:82.93,co:"Asia",cl:"Continental extreme",p:1.6}
+];
+
+function lonToX(lon,w){return(lon+180)/360*w;}
+function latToY(lat,h){return(90-lat)/180*h;}
+
+function buildMapSVG(data) {
+  const W=960,H=500;
+  const wm={};
+  for(const c of (data.cityRanking||[]))wm[c.city]=c;
+  let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;border-radius:8px;border:1px solid #30363d">`;
+  s+=`<defs><radialGradient id="glow"><stop offset="0%" stop-color="#58a6ff" stop-opacity="0.08"/><stop offset="100%" stop-color="#58a6ff" stop-opacity="0"/></radialGradient></defs>`;
+  s+=`<rect width="${W}" height="${H}" fill="#080c12" rx="8"/>`;
+  // Longitude grid
+  for(let lon=-150;lon<=180;lon+=30){const x=lonToX(lon,W);s+=`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#161b22" stroke-width="0.5"/>`;}
+  // Latitude grid + labels
+  const lats=[{l:66.5,n:'Arctic Circle'},{l:23.4,n:'Tropic of Cancer'},{l:0,n:'Equator'},{l:-23.4,n:'Tropic of Capricorn'},{l:-66.5,n:'Antarctic Circle'}];
+  for(const{l,n}of lats){const y=latToY(l,H);s+=`<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="${l===0?'#21262d':'#161b22'}" stroke-width="${l===0?'1':'0.5'}" ${l!==0?'stroke-dasharray="6,4"':''}/>`;s+=`<text x="${W-4}" y="${y-3}" fill="#30363d" font-size="9" font-family="sans-serif" text-anchor="end">${n}</text>`;}
+  // Sort: pending first (behind), then collected (on top)
+  const sorted=[...ALL_CITIES].sort((a,b)=>(wm[a.n]?1:0)-(wm[b.n]?1:0));
+  for(const city of sorted){
+    const x=lonToX(city.lo,W),y=latToY(city.la,H);
+    const r=Math.max(3.5,Math.min(9,2.5+Math.log2(city.p)*1.3));
+    const cd=wm[city.n];const has=!!cd;
+    let col='#484f58';
+    if(has){const rate=cd.warming_rate;col=rate<=0?'#58a6ff':rate<0.15?'#e3b341':rate<0.2?'#d29922':rate<0.25?'#f0883e':'#f85149';}
+    const tip=has?`${city.n} (${city.co})\n${fmt(cd.warming_rate)} °C/decade\nTotal change: ${fmt(cd.total_change,1)} °C\nClimate: ${city.cl}`:`${city.n} (${city.co})\nData collection pending\nClimate: ${city.cl}`;
+    if(has)s+=`<circle cx="${x}" cy="${y}" r="${r+4}" fill="${col}" fill-opacity="0.12"/>`;
+    s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" fill-opacity="${has?0.85:0.3}" stroke="${has?'rgba(255,255,255,0.25)':'#21262d'}" stroke-width="${has?1.5:0.5}" style="cursor:pointer"><title>${tip}</title></circle>`;
+  }
+  // Continent labels
+  const contLabels=[{n:'Europe',x:lonToX(15,W),y:latToY(55,H)-12},{n:'Asia',x:lonToX(90,W),y:latToY(45,H)-12},{n:'Africa',x:lonToX(20,W),y:latToY(5,H)-12},{n:'N. America',x:lonToX(-100,W),y:latToY(50,H)-12},{n:'S. America',x:lonToX(-60,W),y:latToY(-15,H)-12},{n:'Oceania',x:lonToX(145,W),y:latToY(-25,H)-12}];
+  for(const cl of contLabels)s+=`<text x="${cl.x}" y="${cl.y}" fill="#30363d" font-size="11" font-family="sans-serif" text-anchor="middle" font-weight="600">${cl.n}</text>`;
+  s+=`</svg>`;
+  return s;
+}
+
+async function load(){
+  try {
+    const r = await fetch(ap('/api/climate/summary'));
+    if(!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    render(d);
+  } catch(e) {
+    document.getElementById('loading').className='error';
+    document.getElementById('loading').textContent='Error: '+e.message;
+  }
+}
+
+function fmt(v,dec=2){ return v!=null ? (v>=0?'+':'')+v.toFixed(dec) : '—'; }
+function fmtAbs(v,dec=1){ return v!=null ? v.toFixed(dec) : '—'; }
+function pct(v){ return v!=null ? v.toFixed(0)+'%' : '—'; }
+
+function warmColor(rate) {
+  if (rate > 0.3) return '#f85149';
+  if (rate > 0.2) return '#f0883e';
+  if (rate > 0.15) return '#d29922';
+  if (rate > 0.1) return '#e3b341';
+  return '#58a6ff';
+}
+
+function render(d) {
+  const ct = document.getElementById('content');
+  let html = '';
+
+  // Preliminary banner
+  if (d.isPreliminary) {
+    html += `<div class="preliminary-banner">Preliminary report: ${d.citiesAnalyzed} of ${d.citiesTotal} cities analyzed. Data collection ongoing — results are indicative but not yet globally representative.</div>`;
+  }
+
+  // Stats row
+  html += `<div class="stats-row">
+    <div class="stat-card"><div class="label">Mean Warming Rate</div><div class="value warm">${fmt(d.trends?.mean_warming_rate)} °C/dec</div><div class="note">Full period (1940–2024)</div></div>
+    <div class="stat-card"><div class="label">Post-2000 Rate</div><div class="value warm">${fmt(d.trends?.mean_warming_post2000)} °C/dec</div><div class="note">Accelerating ${(d.trends?.mean_warming_post2000/d.trends?.mean_warming_rate).toFixed(1)}× faster</div></div>
+    <div class="stat-card"><div class="label">100% Significant</div><div class="value green">${d.citiesAnalyzed}/${d.citiesAnalyzed}</div><div class="note">All cities warming (p&lt;0.05)</div></div>
+    <div class="stat-card"><div class="label">Extreme Heat Trend</div><div class="value warm">${fmt(d.extremes?.heat_p95_mean_trend,1)} days/dec</div><div class="note">${pct(d.extremes?.heat_p95_pct_significant)} of cities significant</div></div>
+    <div class="stat-card"><div class="label">Frost Day Loss</div><div class="value cool">${fmt(d.extremes?.frost_mean_trend,1)} days/dec</div><div class="note">${pct(d.extremes?.frost_pct_significant)} of cities significant</div></div>
+    <div class="stat-card"><div class="label">Whiplash Index</div><div class="value neutral">${fmtAbs(d.volatility?.mean_whiplash_index)}</div><div class="note">Negative = less volatile</div></div>
+  </div>`;
+
+  // Collection status
+  const coll = d.collection || {};
+  const collPct = coll.total > 0 ? (coll.completed / coll.total * 100) : 0;
+  const projPct = coll.proj_total > 0 ? ((coll.proj_completed||0) / coll.proj_total * 100) : 0;
+  html += `<div class="section">
+    <h2>Data Collection</h2>
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:4px">Historical (1940–2024): <strong>${coll.completed}/${coll.total}</strong> cities</div>
+        <div class="collection-bar"><div class="fill" style="width:${collPct}%"></div></div>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:4px">Projections (1950–2050): <strong>${coll.proj_completed||0}/${coll.proj_total}</strong> cities</div>
+        <div class="collection-bar"><div class="fill" style="width:${projPct}%;background:var(--purple)"></div></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--dim);margin-top:6px">
+      ${(coll.daily_limit_hit || coll.proj_daily_limit_hit) ? '<span style="color:var(--orange)">Daily API limit reached.</span> Collection resumes after UTC midnight.' : '<span style="color:var(--green)">API available.</span>'}
+      ${coll.calls_today ? ' | ' + coll.calls_today.toLocaleString() + ' API calls today' : ''}
+    </div>
+  </div>`;
+
+  // Tabs for main content
+  html += `<div class="tab-row">
+    <button class="tab-btn active" onclick="switchTab(this,'warming')">Warming Rates</button>
+    <button class="tab-btn" onclick="switchTab(this,'acceleration')">Acceleration</button>
+    <button class="tab-btn" onclick="switchTab(this,'extremes')">Extreme Weather</button>
+    <button class="tab-btn" onclick="switchTab(this,'volatility')">Volatility</button>
+    <button class="tab-btn" onclick="switchTab(this,'projections')">Projections</button>
+    <button class="tab-btn" onclick="switchTab(this,'map')">Map</button>
+  </div>`;
+
+  // Tab 1: Warming rates (bar chart + table)
+  const maxRate = Math.max(...(d.cityRanking||[]).map(c=>Math.abs(c.warming_rate)), 0.1);
+  html += `<div class="tab-panel active" id="tab-warming">`;
+  html += `<div class="section"><h2>Warming Rate by City <span>°C per decade, 1940–2024</span></h2>`;
+  html += `<div class="warming-chart">`;
+  for (const c of (d.cityRanking||[])) {
+    const w = (Math.abs(c.warming_rate) / maxRate * 100).toFixed(1);
+    const col = warmColor(c.warming_rate);
+    html += `<div class="warming-bar">
+      <div class="cname">${c.city}</div>
+      <div class="bar-container"><div class="bar-bg"></div><div class="bar-fill" style="width:${w}%;background:${col}"></div></div>
+      <div class="val" style="color:${col}">${fmt(c.warming_rate,3)} °C/dec</div>
+      <div class="total">${fmt(c.total_change,1)} °C</div>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  // Detailed warming table
+  html += `<div class="section"><h2>Detailed Trend Statistics</h2>`;
+  html += `<table><tr><th>#</th><th>City</th><th>Climate</th><th class="num">Warming (°C/dec)</th><th class="num">Sen's Slope</th><th class="num">R²</th><th class="num">p-value</th><th class="num">Total Δ</th><th class="num">Start → End</th></tr>`;
+  for (const c of (d.cityRanking||[])) {
+    const pv = c.p_value < 0.001 ? '<0.001***' : c.p_value < 0.01 ? c.p_value.toFixed(3)+'**' : c.p_value < 0.05 ? c.p_value.toFixed(3)+'*' : c.p_value.toFixed(3);
+    html += `<tr><td>${c.rank}</td><td><strong>${c.city}</strong></td><td style="color:var(--dim);font-size:12px">${c.climate}</td>
+      <td class="num pos">${fmt(c.warming_rate,3)}</td><td class="num">${fmt(c.sen_slope,3)}</td>
+      <td class="num">${fmtAbs(c.r_squared,3)}</td><td class="num sig">${pv}</td>
+      <td class="num pos">${fmt(c.total_change,1)} °C</td>
+      <td class="num" style="color:var(--dim)">${fmtAbs(c.mean_temp_start,1)} → ${fmtAbs(c.mean_temp_end,1)}</td></tr>`;
+  }
+  html += `</table></div></div>`;
+
+  // Tab 2: Acceleration
+  html += `<div class="tab-panel" id="tab-acceleration">`;
+  html += `<div class="section"><h2>Warming Acceleration <span>Pre-1980 vs Post-1980 vs Post-2000</span></h2>`;
+  if ((d.acceleration||[]).length > 0) {
+    html += `<table><tr><th>City</th><th class="num">Pre-1980</th><th class="num">Post-1980</th><th class="num">Post-2000</th><th class="num">Acceleration</th></tr>`;
+    for (const c of (d.acceleration||[]).sort((a,b)=>b.acceleration-a.acceleration)) {
+      const pre = c.pre_1980 < 0 ? 'neg' : 'pos';
+      html += `<tr><td><strong>${c.city}</strong></td>
+        <td class="num ${pre}">${fmt(c.pre_1980,2)}</td>
+        <td class="num pos">${fmt(c.post_1980,2)}</td>
+        <td class="num pos">${fmt(c.post_2000,2)}</td>
+        <td class="num" style="color:var(--orange)">${fmt(c.acceleration,2)}</td></tr>`;
+    }
+    html += `</table>`;
+    html += `<div style="margin-top:12px;font-size:12px;color:var(--dim)">Acceleration = Post-1980 rate minus Pre-1980 rate. Many cities cooled before 1980 (the "global dimming" era from aerosol emissions).</div>`;
+  } else {
+    html += `<div style="color:var(--dim)">Acceleration data not available yet.</div>`;
+  }
+  html += `</div></div>`;
+
+  // Tab 3: Extreme weather
+  html += `<div class="tab-panel" id="tab-extremes">`;
+
+  // Threshold summary
+  html += `<div class="section"><h2>Extreme Threshold Summary</h2>`;
+  const thresholds = [
+    {key:'heat_p95',label:'Heat days (>P95)',icon:'&#9650;'},
+    {key:'heat_35',label:'Heat >35°C',icon:'&#9650;'},
+    {key:'cold_0',label:'Frost days (<0°C)',icon:'&#9660;'},
+    {key:'cold_p05',label:'Cold days (<P5)',icon:'&#9660;'},
+    {key:'cold_-10',label:'Severe cold (<-10°C)',icon:'&#9660;'},
+    {key:'precip_20',label:'Heavy rain (>20mm)',icon:'&#9650;'},
+  ];
+  html += `<table><tr><th>Threshold</th><th class="num">% Significant</th><th class="num">Direction</th><th class="num">Mean Trend (days/dec)</th></tr>`;
+  for (const t of thresholds) {
+    const s = d.thresholdSummary?.[t.key];
+    if (!s) continue;
+    const dir = s.n_increasing > s.n_decreasing ? '↑ Increasing' : s.n_decreasing > s.n_increasing ? '↓ Decreasing' : '— Stable';
+    const dirCls = s.mean_trend > 0 ? 'pos' : 'neg';
+    html += `<tr><td>${t.label}</td><td class="num">${pct(s.pct_significant)}</td>
+      <td class="num" style="color:var(--dim)">${dir}</td>
+      <td class="num ${dirCls}">${fmt(s.mean_trend,2)}</td></tr>`;
+  }
+  html += `</table></div>`;
+
+  // Heat rankings
+  html += `<div class="section"><h2>Extreme Heat Trend <span>Days above 95th percentile of 1961–1990 baseline</span></h2>`;
+  if ((d.heatRanking||[]).length > 0) {
+    html += `<table><tr><th>City</th><th>Climate</th><th class="num">Trend (days/dec)</th><th class="num">Sig.</th><th class="num">1940s avg</th><th class="num">2020s avg</th></tr>`;
+    for (const c of d.heatRanking) {
+      html += `<tr><td><strong>${c.city}</strong></td><td style="color:var(--dim);font-size:12px">${c.climate}</td>
+        <td class="num pos">${fmt(c.trend,2)}</td>
+        <td class="num ${c.significant?'sig':'nsig'}">${c.significant?'Yes':'No'}</td>
+        <td class="num">${fmtAbs(c.avg_1940s,1)}</td><td class="num">${fmtAbs(c.avg_2020s,1)}</td></tr>`;
+    }
+    html += `</table></div>`;
+  }
+
+  // Frost rankings
+  html += `<div class="section"><h2>Disappearing Frost <span>Days with T_min < 0°C</span></h2>`;
+  if ((d.frostRanking||[]).length > 0) {
+    html += `<table><tr><th>City</th><th>Climate</th><th class="num">Trend (days/dec)</th><th class="num">Sig.</th><th class="num">1940s avg</th><th class="num">2020s avg</th></tr>`;
+    for (const c of d.frostRanking) {
+      html += `<tr><td><strong>${c.city}</strong></td><td style="color:var(--dim);font-size:12px">${c.climate}</td>
+        <td class="num neg">${fmt(c.trend,2)}</td>
+        <td class="num ${c.significant?'sig':'nsig'}">${c.significant?'Yes':'No'}</td>
+        <td class="num">${fmtAbs(c.avg_1940s,1)}</td><td class="num">${fmtAbs(c.avg_2020s,1)}</td></tr>`;
+    }
+    html += `</table></div>`;
+  }
+  html += `</div>`;
+
+  // Tab 4: Volatility
+  html += `<div class="tab-panel" id="tab-volatility">`;
+  html += `<div class="section"><h2>Climate Whiplash Index <span>Composite volatility metric (positive = more volatile)</span></h2>`;
+  html += `<div style="margin-bottom:16px;font-size:13px;color:var(--dim)">The whiplash index combines day-to-day temperature swings, diurnal temperature range trends, inter-annual variance, and precipitation variability. A negative value means the city is becoming <em>less</em> volatile over time — a nuance often missed in popular narratives about "more extreme weather."</div>`;
+
+  if ((d.whiplashRanking||[]).length > 0) {
+    const maxWI = Math.max(...d.whiplashRanking.map(c=>Math.abs(c.whiplash_index)), 0.1);
+    html += `<div class="warming-chart">`;
+    for (const c of d.whiplashRanking) {
+      const isPos = c.whiplash_index >= 0;
+      const w = (Math.abs(c.whiplash_index) / maxWI * 100).toFixed(1);
+      const col = isPos ? 'var(--orange)' : 'var(--cyan)';
+      html += `<div class="warming-bar">
+        <div class="cname">${c.city}</div>
+        <div class="bar-container"><div class="bar-bg"></div><div class="bar-fill" style="width:${w}%;background:${col}"></div></div>
+        <div class="val" style="color:${col}">${c.whiplash_index>=0?'+':''}${c.whiplash_index.toFixed(3)}</div>
+        <div class="total"></div>
+      </div>`;
+    }
+    html += `</div>`;
+
+    html += `<div style="margin-top:24px">`;
+    html += `<table><tr><th>City</th><th>Climate</th><th class="num">Whiplash Index</th><th class="num">Swing Trend (°C/dec)</th><th class="num">DTR Trend (°C/dec)</th></tr>`;
+    for (const c of d.whiplashRanking) {
+      const wiCls = c.whiplash_index >= 0 ? 'pos' : 'neg';
+      html += `<tr><td><strong>${c.city}</strong></td><td style="color:var(--dim);font-size:12px">${c.climate}</td>
+        <td class="num ${wiCls}">${c.whiplash_index>=0?'+':''}${c.whiplash_index.toFixed(3)}</td>
+        <td class="num">${fmt(c.swing_trend,4)}</td>
+        <td class="num">${fmt(c.dtr_trend,3)}</td></tr>`;
+    }
+    html += `</table></div>`;
+  }
+
+  html += `<div class="section" style="margin-top:24px"><h2>Key Insight</h2>
+    <div style="font-size:14px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+      <strong style="color:var(--cyan)">Decreasing volatility ≠ decreasing risk.</strong> While the mean whiplash index is negative (weather is becoming less chaotic day-to-day), extreme thresholds are crossed more often because the <em>mean</em> is shifting. The risk comes from threshold shifts, not from increased chaos. "More extreme weather" and "more volatile weather" are different claims — the first is supported, the second is not.
+    </div>
+  </div>`;
+  html += `</div>`;
+
+  // Tab 5: Projections (CMIP6 climate models)
+  html += `<div class="tab-panel" id="tab-projections">`;
+  const proj = d.projections || {};
+  if (proj.citiesAnalyzed > 0) {
+    // Aggregate summary
+    const agg = proj.aggregate || {};
+    html += `<div class="section"><h2>Projected Warming <span>CMIP6 ensemble (3 models), relative to 2000–2024 baseline</span></h2>`;
+    html += `<div class="stats-row">
+      <div class="stat-card"><div class="label">Mean Warming by 2050</div><div class="value warm">${fmt(agg.mean_projected_warming_2050)} °C</div><div class="note">Ensemble mean across ${proj.citiesAnalyzed} cities</div></div>
+      <div class="stat-card"><div class="label">Highest Warming</div><div class="value warm">${agg.highest_warming ? fmtAbs(agg.highest_warming.value,2)+' °C' : '—'}</div><div class="note">${agg.highest_warming?.city||'—'}</div></div>
+      <div class="stat-card"><div class="label">Lowest Warming</div><div class="value cool">${agg.lowest_warming ? fmtAbs(agg.lowest_warming.value,2)+' °C' : '—'}</div><div class="note">${agg.lowest_warming?.city||'—'}</div></div>
+      <div class="stat-card"><div class="label">Model Spread</div><div class="value neutral">${fmtAbs(agg.mean_model_spread,2)} °C</div><div class="note">Mean range across models</div></div>
+    </div></div>`;
+
+    // City warming ranking table
+    if ((proj.rankings||[]).length > 0) {
+      html += `<div class="section"><h2>Warming by City <span>Projected warming by 2040–2050 (ensemble mean)</span></h2>`;
+      const maxW = Math.max(...proj.rankings.map(c => Math.abs(c.warming2050||0)), 0.1);
+      html += `<div class="warming-chart">`;
+      for (const c of proj.rankings) {
+        const w = (Math.abs(c.warming2050||0) / maxW * 100).toFixed(1);
+        const col = warmColor(c.warming2050/3);
+        html += `<div class="warming-bar">
+          <div class="cname">${c.city}</div>
+          <div class="bar-container"><div class="bar-bg"></div><div class="bar-fill" style="width:${w}%;background:${col}"></div></div>
+          <div class="val" style="color:${col}">${fmt(c.warming2050)} °C</div>
+          <div class="total" style="font-size:10px">&plusmn;${fmtAbs(c.spread,2)}</div>
+        </div>`;
+      }
+      html += `</div>`;
+      html += `<table style="margin-top:16px"><tr><th>#</th><th>City</th><th>Continent</th><th>Climate</th><th class="num">Warming (°C)</th><th class="num">Spread</th><th class="num">Best Model</th></tr>`;
+      for (const c of proj.rankings) {
+        html += `<tr><td>${c.rank}</td><td><strong>${c.city}</strong></td><td style="color:var(--dim)">${c.continent}</td><td style="color:var(--dim);font-size:12px">${c.climate}</td>
+          <td class="num pos">${fmt(c.warming2050)}</td><td class="num">${fmtAbs(c.spread,2)}</td>
+          <td class="num" style="color:var(--dim);font-size:11px">${c.bestModel||'—'}</td></tr>`;
+      }
+      html += `</table></div>`;
+    }
+
+    // Model performance summary
+    const models = proj.modelPerformance || {};
+    const modelKeys = Object.keys(models);
+    if (modelKeys.length > 0) {
+      html += `<div class="section"><h2>Model Performance <span>Evaluation against ERA5 observations (1950–2024)</span></h2>`;
+      html += `<table><tr><th>Model</th><th class="num">Mean RMSE (°C)</th><th class="num">Mean MAE (°C)</th><th class="num">Mean Bias (°C)</th><th class="num">Trend Error (°C/dec)</th><th class="num">Cities</th></tr>`;
+      for (const mk of modelKeys) {
+        const m = models[mk];
+        const biasClass = m.mean_bias > 0 ? 'pos' : 'neg';
+        html += `<tr><td><strong>${m.label||mk}</strong></td>
+          <td class="num">${fmtAbs(m.mean_rmse,3)}</td><td class="num">${fmtAbs(m.mean_mae,3)}</td>
+          <td class="num ${biasClass}">${fmt(m.mean_bias,3)}</td>
+          <td class="num">${fmt(m.mean_trend_error,3)}</td>
+          <td class="num">${m.n_cities}</td></tr>`;
+      }
+      html += `</table>`;
+      html += `<div style="margin-top:8px;font-size:12px;color:var(--dim)">RMSE = Root Mean Square Error (lower = better). Bias = mean model minus observed. Trend Error = model warming rate minus observed warming rate.</div>`;
+      html += `</div>`;
+    }
+
+    // Continental projections
+    const contW = proj.continentWarming || {};
+    const contKeys = Object.keys(contW);
+    if (contKeys.length > 0) {
+      html += `<div class="section"><h2>Continental Projections <span>Mean warming by 2050 per continent</span></h2>`;
+      html += `<table><tr><th>Continent</th><th class="num">Projected Warming (°C)</th></tr>`;
+      for (const c of contKeys.sort((a,b) => contW[b]-contW[a])) {
+        html += `<tr><td>${c}</td><td class="num pos">${fmt(contW[c])}</td></tr>`;
+      }
+      html += `</table></div>`;
+    }
+
+    // Best model by climate zone
+    const zones = proj.zoneBestModel || {};
+    const zoneKeys = Object.keys(zones);
+    if (zoneKeys.length > 0) {
+      html += `<div class="section"><h2>Best Model by Climate Zone <span>Lowest RMSE in each zone</span></h2>`;
+      html += `<table><tr><th>Climate Zone</th><th>Best Model</th><th class="num">RMSE (°C)</th><th class="num">Cities</th></tr>`;
+      for (const z of zoneKeys.sort()) {
+        const zd = zones[z];
+        html += `<tr><td>${z}</td><td style="color:var(--dim)">${zd.best_model||'—'}</td>
+          <td class="num">${zd.best_rmse != null ? fmtAbs(zd.best_rmse,3) : '—'}</td>
+          <td class="num">${zd.n_cities||0}</td></tr>`;
+      }
+      html += `</table></div>`;
+    }
+  } else {
+    // No projection data yet
+    html += `<div class="section"><h2>Climate Model Projections <span>CMIP6 HighResMIP</span></h2>`;
+    html += `<div style="padding:40px;text-align:center;color:var(--dim);background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+      <div style="font-size:24px;margin-bottom:12px;">&#127758;</div>
+      <div style="font-size:14px;margin-bottom:8px;">Projection data collection not yet started</div>
+      <div style="font-size:12px">CMIP6 climate model projections (1950–2050) will be collected for 15 representative cities across 6 continents.<br>
+      Models: EC-Earth3P-HR (Europe), MRI-AGCM3-2-S (Japan), CMCC-CM2-VHR4 (Italy)<br>
+      Estimated collection time: ~6 days (rate-limited by Open-Meteo API)</div>
+    </div></div>`;
+  }
+  html += `</div>`;
+
+  // Tab 6: Map
+  html += `<div class="tab-panel" id="tab-map">`;
+  html += `<div class="section"><h2>Global City Coverage <span>52 cities across 6 continents</span></h2>`;
+  html += `<div class="map-container">${buildMapSVG(d)}</div>`;
+  html += `<div class="map-legend">
+    <div class="map-legend-item"><span class="map-dot" style="background:#f85149"></span> &gt;0.25 °C/dec</div>
+    <div class="map-legend-item"><span class="map-dot" style="background:#f0883e"></span> 0.20–0.25</div>
+    <div class="map-legend-item"><span class="map-dot" style="background:#d29922"></span> 0.15–0.20</div>
+    <div class="map-legend-item"><span class="map-dot" style="background:#e3b341"></span> &lt;0.15</div>
+    <div class="map-legend-item"><span class="map-dot" style="background:#58a6ff"></span> ≤0 (cooling)</div>
+    <div class="map-legend-item"><span class="map-dot" style="background:#484f58;opacity:0.35"></span> Data pending</div>
+  </div>`;
+  html += `<div style="text-align:center;font-size:11px;color:var(--dim);margin-top:8px">Hover over cities for details. Circle size indicates metropolitan population.</div>`;
+
+  // Continental summary table
+  const contStats = {};
+  for (const city of ALL_CITIES) {
+    if (!contStats[city.co]) contStats[city.co] = {total:0, collected:0, rates:[]};
+    contStats[city.co].total++;
+    const cd = (d.cityRanking||[]).find(c=>c.city===city.n);
+    if (cd) { contStats[city.co].collected++; contStats[city.co].rates.push(cd.warming_rate); }
+  }
+  html += `<div class="section" style="margin-top:24px"><h2>Collection Progress by Continent</h2>`;
+  html += `<table><tr><th>Continent</th><th class="num">Cities</th><th class="num">Collected</th><th class="num">Progress</th><th class="num">Mean Warming</th></tr>`;
+  for (const co of ['Europe','Asia','Africa','North America','South America','Oceania']) {
+    const cs = contStats[co]||{total:0,collected:0,rates:[]};
+    const pctDone = cs.total>0 ? (cs.collected/cs.total*100).toFixed(0) : '0';
+    const meanW = cs.rates.length>0 ? fmt(cs.rates.reduce((a,b)=>a+b,0)/cs.rates.length) : '\u2014';
+    const barW = cs.total>0 ? (cs.collected/cs.total*100) : 0;
+    html += `<tr><td><strong>${co}</strong></td><td class="num">${cs.total}</td><td class="num">${cs.collected}</td>
+      <td class="num"><div style="display:inline-flex;align-items:center;gap:6px"><div class="collection-bar" style="width:80px;display:inline-block"><div class="fill" style="width:${barW}%"></div></div><span style="font-size:11px">${pctDone}%</span></div></td>
+      <td class="num ${cs.rates.length?'pos':''}">${meanW}</td></tr>`;
+  }
+  html += `</table></div>`;
+  html += `</div>`; // tab-map
+
+  // Footer with report link
+  html += `<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--dim)">
+    Full report: <a href="${ap('/api/file?path=/output/research/climate-trends/report.md')}">report.md</a> |
+    Data: ERA5 Reanalysis via Open-Meteo | Period: 1940\u20132024 |
+    Generated: ${d.generated || '\u2014'}
+  </div>`;
+
+  ct.innerHTML = html;
+}
+
+function switchTab(btn, name) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+load();
+</script>
+</body>
+</html>
