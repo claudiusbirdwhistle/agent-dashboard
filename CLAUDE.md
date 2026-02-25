@@ -58,9 +58,13 @@ Set `active` at the start of each invocation (even if unchanged — update
 **`/state/next_prompt.txt`** — Written twice per invocation:
 
 - **Start:** `"Currently working on: <id> — <context>. If crashed, retry from here."`
-- **End:** `"Completed: <what was done>. Next: <next id and first action>."`
+- **End:** Rich breadcrumb with enough context for the next invocation to
+  resume without re-reading already-comprehended files:
+  `"Completed: <what>. Next: <id> — <first action>. Context: <key facts, file paths, structural notes>."`
 
-The supervisor feeds this verbatim to the next invocation.
+The supervisor feeds this verbatim to the next invocation. **Include enough
+detail that the next invocation can skip exploratory reads** — file paths,
+key structural decisions, what was verified, what remains.
 
 ---
 
@@ -70,9 +74,17 @@ Follow this sequence at the start of every invocation.
 
 ### The Sequence
 
-1. **Read state** — Read `/state/dev-objectives.json`, `/state/next_prompt.txt`,
-   and `/state/directives.json` (if it exists). Check the skills index at
-   `/state/skills/index.json` and load any skills relevant to today's work.
+1. **Read state (parallel)** — Read ALL state files in a **single parallel
+   tool call batch** to minimize turn overhead:
+   - `/state/dev-objectives.json`
+   - `/state/next_prompt.txt`
+   - `/state/directives.json`
+   - `/state/skills/index.json`
+   - `/state/health.json`
+
+   Do NOT read these sequentially — issue all Read calls in one turn.
+   Do NOT read `/state/agent-policies.json` unless a `policy` directive
+   references it (the file may not exist).
    The `active` field in objectives tells you where the previous invocation
    left off. `next_prompt.txt` tells you what to do next, or what to retry
    if the previous invocation crashed.
@@ -83,9 +95,11 @@ Follow this sequence at the start of every invocation.
    directives immediately; queue `normal` and `background` per their priority.
    See the Directives section for the full directive handling rules.
 
-3. **Claim the work** — Overwrite `next_prompt.txt` with:
+3. **Claim the work (within first 2 turns after reads)** — Overwrite
+   `next_prompt.txt` with:
    `"Currently working on: <id> — <one-line context>. If crashed, retry from here."`
-   Update `active.notes` in `dev-objectives.json`. Do this before touching any code.
+   Update `active.notes` in `dev-objectives.json`. Do this immediately
+   after state reads — before any exploration or code reads.
 
 4. **Create a task list** — Use the TodoWrite tool to create a checklist for
    this invocation. Final two items must always be:
@@ -103,8 +117,10 @@ Follow this sequence at the start of every invocation.
 8. **Update state** — Complete the final two todo items:
    - In `dev-objectives.json`: mark objective `completed` if done; move
      `active` to next unblocked item with fresh `notes`.
-   - Overwrite `next_prompt.txt`:
-     `"Completed: <what was done>. Next: <next objective id and first action>."`
+   - Overwrite `next_prompt.txt` with a **rich breadcrumb**:
+     `"Completed: <what>. Next: <id> — <exact first action>. Context: <files read, key facts, what's verified>."`
+     Include enough detail to prevent the next invocation from re-reading
+     the same files or re-discovering the same facts.
 
 ### Turn Budget
 
