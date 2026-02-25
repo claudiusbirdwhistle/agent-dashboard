@@ -152,6 +152,12 @@ The Express server at port 3000 is the sole data layer.
 
 ---
 
+## Idle Policy
+
+**If there are no pending or active directives and no pending work items in `dev-objectives.json`, write `"disabled"` to `/state/agent_enabled` and stop.** Do not invent work. Wait for the operator to send a new directive.
+
+---
+
 ## Principals
 
 - **Never merge `dev` into `main`.** That requires human review.
