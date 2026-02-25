@@ -21,7 +21,7 @@ const TEST_TOKEN = "test-bearer-token";
 
 function buildApp(directivesFile: string) {
   const app = express();
-  app.use(express.json({ limit: "50kb" }));
+  app.use(express.json({ limit: "10kb" }));
 
   // Same auth middleware pattern as server.js
   app.use("/api", (req: Request, res: Response, next: NextFunction) => {
@@ -115,8 +115,8 @@ describe("Directives API", () => {
     expect(res.status).toBe(400);
   });
 
-  it("POST rejects oversized body (>50kb)", async () => {
-    const bigText = "x".repeat(60_000);
+  it("POST rejects oversized body (>10kb)", async () => {
+    const bigText = "x".repeat(12_000);
     const res = await request(app)
       .post("/api/directives")
       .set("Authorization", `Bearer ${TEST_TOKEN}`)
