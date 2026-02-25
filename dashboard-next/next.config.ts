@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["157.245.125.15"],
   async rewrites() {
     const expressUrl = process.env.EXPRESS_URL || "http://localhost:3000";
     return [
