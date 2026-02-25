@@ -32,11 +32,78 @@ Prior instructions for the broader codebase refactor are in
 - **Don't break the old dashboard.** The Express server on port 3000
   must keep working throughout. The only changes to `server.js` are
   additive: directive CRUD endpoints and `walkDir` skip list updates.
-- **Commit early, commit often.** Small atomic commits. Conventional
-  commit format: `type(scope): description`.
-  Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`.
-  Scopes: `dashboard-next`, `directives`, `auth`, `file-viewer`,
-  `express`.
+- **Commit early, commit often.** Every invocation produces at least
+  one commit on the current feature branch. See the Git Workflow
+  section for branching rules, merge policy, and commit conventions.
+
+---
+
+## Git Workflow
+
+### Branch structure
+
+```
+main   ← production, human-supervised merges only. Never touch this.
+  └── dev   ← integration branch, receives completed features
+        ├── feature/scaffold-nextjs
+        ├── feature/auth
+        ├── feature/directives-api
+        ├── feature/directives-ui
+        ├── feature/file-viewer
+        └── feature/...
+```
+
+### Rules
+
+- **Every significant feature gets its own branch** cut from `dev`.
+  A "significant feature" maps roughly to one item in the
+  Implementation Order list — scaffolding, auth, directives API,
+  directives UI, file viewer, etc. Small fixes or documentation
+  changes can go directly on `dev`.
+
+- **Every invocation produces at least one commit** on the current
+  feature branch. An invocation with no commit is a stall.
+
+- **Merge to `dev` when a feature is complete** — meaning all its
+  tests pass, the server runs without errors, and the implementation
+  matches the design. Use a regular merge commit (not squash) to
+  preserve the per-invocation history.
+  ```bash
+  git checkout dev
+  git merge --no-ff feature/<name> -m "feat(<scope>): complete <feature>"
+  git branch -d feature/<name>
+  ```
+
+- **Never merge `dev` into `main`.** That step requires human
+  review and is not your responsibility. When `dev` reaches a
+  meaningful milestone you consider shippable, note it clearly in
+  the journal and in `next_prompt.txt`. The operator will handle
+  the merge.
+
+### Starting a new feature
+
+At the beginning of the invocation where you start a new feature:
+```bash
+git checkout dev
+git pull origin dev          # sync before branching
+git checkout -b feature/<name>
+```
+
+Use kebab-case names that match the implementation step:
+`feature/scaffold-nextjs`, `feature/auth`, `feature/directives-api`,
+`feature/directives-ui`, `feature/file-viewer`, `feature/security`.
+
+### Commit message convention
+
+```
+type(scope): short description
+```
+
+Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`
+Scopes: `dashboard-next`, `directives`, `auth`, `file-viewer`, `express`
+
+Every commit on a feature branch should leave the code in a
+runnable state — no broken builds mid-branch.
 
 ---
 
@@ -314,9 +381,15 @@ count of `dev-journal.md`. If it exceeds **150 lines**:
 3. Rewrite `dev-journal.md` with only the recent entries.
 
 The active journal stays under ~80 lines. Archive files grow
-indefinitely but are never loaded into invocation context — they exist
-for audit purposes only. The 3-invocation recent window is enough to
-detect abnormal exits and understand current momentum.
+indefinitely and are not loaded automatically — they exist for audit
+purposes and selective deep-context retrieval.
+
+If you need more historical context than the active journal provides
+(e.g. to understand why a past decision was made, or to reconstruct
+what a previous invocation attempted), you may read archive files
+selectively. Because they are split by month, you can target only the
+relevant period rather than ingesting the full history. Read only as
+much as you actually need.
 
 **Mandatory every invocation.** An invocation with no journal entry
 is a failed invocation.
