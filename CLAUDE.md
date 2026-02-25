@@ -76,9 +76,8 @@ main   ← production, human-supervised merges only. Never touch this.
 
 - **Never merge `dev` into `main`.** That step requires human
   review and is not your responsibility. When `dev` reaches a
-  meaningful milestone you consider shippable, note it clearly in
-  the journal and in `next_prompt.txt`. The operator will handle
-  the merge.
+  meaningful milestone you consider shippable, note it in
+  `next_prompt.txt`. The operator will handle the merge.
 
 ### Starting a new feature
 
@@ -180,7 +179,7 @@ them:
 | Type | Example | Agent behavior |
 |------|---------|---------------|
 | `task` | "Add CORS headers to Express" | Adds to `dev-objectives.json` as a work item. Do it, mark done. |
-| `focus` | "Drop everything, focus on testing" | Rewrites `dev-phase.json`, reorders objectives. Suspends current work. |
+| `focus` | "Drop everything, focus on testing" | Reorders objectives, updates `active` to the new priority. Suspends current work. |
 | `policy` | "Always run tests before committing" | Appends to `/state/agent-policies.json`. Standing constraint on all future invocations. |
 
 ### Directive schema
@@ -339,108 +338,56 @@ Each step committed before moving to the next.
 ## State Files
 
 You have no memory between invocations except what you write to disk.
-All state files live in `/state/` and are prefixed `dev-`.
-
-**`/state/dev-journal.md`**
-Your running log, written in two stages each invocation.
-
-**Stage 1 — Stub (write at invocation start, before any work):**
-Immediately after reading state, append this to the journal:
-```
-## [ISO-timestamp] STARTED
-Goal: [one sentence from next_prompt.txt describing this invocation's goal]
-Status: IN PROGRESS — if no COMPLETED entry follows, this invocation ended abnormally (context exhaustion, crash, etc.)
-```
-This means: if the next invocation opens the journal and sees a `STARTED`
-entry with no matching `COMPLETED` entry after it, it knows exactly what
-was being attempted and that it didn't finish cleanly. It can decide
-whether to retry or move on.
-
-**Stage 2 — Completion (write at invocation end, after all work):**
-Append a second entry immediately after the stub:
-```
-## [ISO-timestamp] COMPLETED
-What was done: [files created/modified, tests written, commands run]
-What broke or surprised: [anything unexpected]
-Commits: [hash] [message]
-Next: [what the next invocation should do]
-```
-
-If context runs out before Stage 2 is written, the stub alone is enough
-for the next invocation to understand what happened.
-
-**Journal rotation — keeping context lean:**
-The journal is read in full at every invocation start. Left unchecked
-it becomes a context drain. After appending any entry, check the line
-count of `dev-journal.md`. If it exceeds **150 lines**:
-
-1. Identify the oldest entries (everything except the last 3 complete
-   invocation pairs — roughly the most recent 60-80 lines).
-2. Move the older entries to a daily archive file:
-   `/state/dev-journal-archive-YYYY-MM-DD.md` (append, don't overwrite).
-3. Rewrite `dev-journal.md` with only the recent entries.
-
-The active journal stays under ~80 lines. Archive files grow
-indefinitely and are not loaded automatically — they exist for audit
-purposes and selective deep-context retrieval.
-
-If you need more historical context than the active journal provides
-(e.g. to understand why a past decision was made, or to reconstruct
-what a previous invocation attempted), you may read archive files
-selectively. Because they are split by day, each file is small (a busy
-day produces ~100-200 lines) and you can target only the relevant date
-rather than ingesting the full history. Read only as much as you
-actually need.
-
-**Mandatory every invocation.** An invocation with no journal entry
-is a failed invocation.
+There are exactly two state files you must maintain.
 
 **`/state/dev-objectives.json`**
-Your work item list. Each item:
-```json
-{
-  "id": "scaffold-nextjs",
-  "description": "Scaffold dashboard-next with create-next-app + deps",
-  "status": "active | completed | blocked",
-  "depends_on": [],
-  "created_at": "2026-02-25T...",
-  "completed_at": null
-}
-```
-Update status as you complete items. Add new items discovered during work.
+Your work backlog and current breadcrumb. Top-level structure:
 
-**`/state/dev-phase.json`**
-Your current focus:
 ```json
 {
-  "phase": "dashboard-next",
-  "current_step": "1-scaffold",
-  "started_at": "2026-02-25T...",
-  "notes": "Starting Next.js project scaffold"
+  "active": {
+    "id": "directives-ui",
+    "notes": "One sentence: what was done so far and what comes next."
+  },
+  "items": [
+    {
+      "id": "scaffold-nextjs",
+      "description": "Scaffold dashboard-next with create-next-app + deps",
+      "status": "pending | active | completed | blocked",
+      "depends_on": [],
+      "created_at": "2026-02-25T...",
+      "completed_at": null
+    }
+  ]
 }
 ```
 
-**`/state/dev-health.json`**
-Stall tracking:
-```json
-{ "stall_count": 0, "total_invocations": 0 }
-```
-Increment `total_invocations` every run. Increment `stall_count` if
-you made no meaningful change (no commit). Reset `stall_count` to 0
-when you make progress.
+- `active` is your breadcrumb. Set it at the start of every invocation
+  (even if the id is unchanged — update the `notes` to reflect where
+  you are right now). Update it again at the end.
+- When you finish an objective, set its `status` to `"completed"` and
+  set `completed_at`. Move `active` to the next unblocked item.
+- Add new items to `items` as work is discovered.
 
 **`/state/next_prompt.txt`**
-Written at the end of every invocation. The supervisor feeds this
-verbatim as the prompt to the next invocation. Be specific: what step
-you completed, what step comes next, any blockers or decisions needed.
+Written **twice** every invocation:
+
+- **At the start** (before any work): overwrite with
+  `"Currently working on: <id> — <one-line context>. If this invocation
+  crashed, retry from this point."`
+- **At the end** (after committing): overwrite with
+  `"Completed: <what was done>. Next: <next objective id and first action>."`
+
+The supervisor feeds `next_prompt.txt` verbatim as the prompt to the
+next invocation. If the agent crashes mid-invocation, the next
+invocation will read the "Currently working on" line and know exactly
+what to retry.
 
 ### State Safety
 
 - Write to a temp file first, then rename into place (atomic writes).
-- Back up state files to `/state/backups/` before overwriting if the
-  existing content matters.
-- If a state file is missing on startup, create it fresh and note
-  the gap in the journal.
+- If `dev-objectives.json` is missing or malformed, reconstruct it from
+  `next_prompt.txt` and the git log.
 
 ---
 
@@ -448,67 +395,50 @@ you completed, what step comes next, any blockers or decisions needed.
 
 Every invocation must follow this sequence:
 
-1. **Read state** — Read `dev-journal.md`, `dev-objectives.json`,
-   `dev-phase.json`, `dev-health.json`, and `next_prompt.txt`. Read
-   `directives.json` if it exists. Check whether the last journal
-   entry is a `STARTED` stub with no `COMPLETED` entry — if so, the
-   previous invocation ended abnormally; decide whether to retry its
-   goal or move on, and note this in your own entry.
+1. **Read state** — Read `/state/dev-objectives.json` and
+   `/state/next_prompt.txt`. Read `/state/directives.json` if it
+   exists. Then read the design doc:
+   `/agent/docs/plans/2026-02-25-dashboard-next-design.md`.
+   The `active` field in objectives tells you exactly where the
+   previous invocation left off. The `next_prompt.txt` tells you
+   what to do if it completed cleanly, or what to retry if it crashed.
 
-2. **Write journal stub** — Before touching any code, append a
-   `STARTED` entry to `dev-journal.md` (see State Files section for
-   format). This is your crash receipt: if this invocation ends
-   abnormally, the next invocation will see it and know what was
-   in progress.
+2. **Claim the work** — Overwrite `next_prompt.txt` with:
+   `"Currently working on: <id> — <one-line context>. If crashed, retry from here."`
+   Update `active.notes` in `dev-objectives.json` with a one-line
+   breadcrumb. Do this before touching any code.
 
 3. **Create a task list** — Use `TodoWrite` to create a checklist for
    this invocation. The final two items must always be:
-   - `Write COMPLETED journal entry`
-   - `Update next_prompt.txt`
-   These are non-negotiable. An invocation that ends with these items
-   still unchecked has failed regardless of what else was accomplished.
-   Keep the task list short (3-5 items total) so it is completable
-   within the turn budget.
+   - `Update dev-objectives.json (active + status)`
+   - `Update next_prompt.txt (completion)`
+   Keep the list to 3–5 items total so it fits within the turn budget.
 
-4. **Do one unit of work** — Scaffold one component, write tests for
-   one feature, implement one endpoint, fix one bug. Don't try to
-   complete the entire implementation in one invocation.
+4. **Do one unit of work** — One component, one endpoint, one test
+   suite. Not the whole feature. Not two features.
 
-5. **Verify** — Run `npm test`, confirm the server starts, check
-   nothing regressed.
+5. **Verify** — Run `npm test`. Confirm nothing regressed.
 
-6. **Commit** — Atomic git commits with conventional messages.
+6. **Commit** — Atomic git commit with a conventional message.
 
-7. **Write COMPLETED journal entry** — Mark todo item done. Format:
-   ```
-   ## [ISO-timestamp] COMPLETED
-   Done: [one sentence]
-   Commits: [hash] [message]
-   Next: [one sentence]
-   ```
-   That is the entire entry. Four lines. Do not expand it.
+7. **Update state** — Mark the two final todo items done:
+   - In `dev-objectives.json`: if the objective is finished set
+     `status: "completed"` and `completed_at`; move `active` to the
+     next unblocked item with a fresh `notes`.
+   - Overwrite `next_prompt.txt` with:
+     `"Completed: <what was done>. Next: <next objective id and first action>."`
 
-8. **Update `next_prompt.txt`** — Mark todo item done. One specific
-   sentence describing exactly what the next invocation should start
-   with.
-
-**Budget your turns — this is critical.** You have a fixed number of
-turns per invocation. The most common failure mode is spending all turns
-on implementation and leaving none for state management. The result is a
-STARTED stub with no COMPLETED entry, which forces the next invocation
-to re-orient from scratch.
-
-**Hard rule: stop implementation work by turn 15.** Use the remaining
-turns for verification, committing, and closing out your task list. If
-you are on turn 15 or later, do not begin any new implementation work.
-A half-finished feature with a COMPLETED journal entry is far more
-valuable than a finished feature the next invocation can't find.
+**Hard rule: stop implementation work by turn 15.** Use remaining
+turns for verification, committing, and step 7. If you are on turn 15
+or later, do not begin any new implementation work. A half-finished
+feature with updated state is far more valuable than a finished feature
+the next invocation can't find.
 
 **Stall thresholds:**
-- 3 consecutive stalls: Analyze why in the journal. Change approach.
-- 5 consecutive stalls: Pick a different step from the implementation
+- 3 consecutive stalls (no commit): change approach.
+- 5 consecutive stalls: pick a different step from the implementation
   order.
-- 8 consecutive stalls: Write `disabled` to `/state/agent_enabled`.
+- 8 consecutive stalls: write `disabled` to `/state/agent_enabled`.
 
 ---
 
