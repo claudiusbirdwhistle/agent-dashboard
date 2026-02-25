@@ -76,8 +76,19 @@ app.get('/api/status', (req, res) => {
 
   const phase = readJson(path.join(STATE_DIR, 'phase.json'));
   const health = readJson(path.join(STATE_DIR, 'health.json'));
-  const objectives = readJson(path.join(STATE_DIR, 'objectives.json'));
+  // Agent writes dev-objectives.json with { active, items: [...] } shape
+  const devObj = readJson(path.join(STATE_DIR, 'dev-objectives.json'));
+  const objectives = devObj?.items ?? readJson(path.join(STATE_DIR, 'objectives.json')) ?? [];
   const activeObjectives = Array.isArray(objectives) ? objectives.filter(o => o.status === 'active') : [];
+
+  // Count invocations from log files
+  let totalInvocations = health?.total_invocations || 0;
+  if (!totalInvocations) {
+    try {
+      const logFiles = fs.readdirSync('/var/log/agent/').filter(f => f.startsWith('invocation_') && f.endsWith('.log'));
+      totalInvocations = logFiles.length;
+    } catch { /* ignore */ }
+  }
 
   // Disk usage
   let diskUsage = null;
@@ -89,8 +100,9 @@ app.get('/api/status', (req, res) => {
   res.json({
     enabled, processStatus,
     phase: phase?.phase || null,
-    stallCount: health?.stall_count || 0,
-    totalInvocations: health?.total_invocations || 0,
+    // support both field names: consecutive_stalls (agent) and stall_count (legacy)
+    stallCount: health?.consecutive_stalls || health?.stall_count || 0,
+    totalInvocations,
     activeObjectives: activeObjectives.length,
     objectives: Array.isArray(objectives) ? objectives : [],
     diskUsage
