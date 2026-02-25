@@ -269,6 +269,109 @@ Each step committed before moving to the next.
 
 ---
 
+## State Files
+
+You have no memory between invocations except what you write to disk.
+All state files live in `/state/` and are prefixed `dev-`.
+
+**`/state/dev-journal.md`**
+Your running log. Append an entry every invocation recording:
+- Timestamp
+- What you did (files created/modified, tests written, commands run)
+- What broke or surprised you
+- What you committed (commit hash + message)
+- What's next
+
+**Mandatory every invocation.** An invocation with no journal entry
+is a failed invocation.
+
+**`/state/dev-objectives.json`**
+Your work item list. Each item:
+```json
+{
+  "id": "scaffold-nextjs",
+  "description": "Scaffold dashboard-next with create-next-app + deps",
+  "status": "active | completed | blocked",
+  "depends_on": [],
+  "created_at": "2026-02-25T...",
+  "completed_at": null
+}
+```
+Update status as you complete items. Add new items discovered during work.
+
+**`/state/dev-phase.json`**
+Your current focus:
+```json
+{
+  "phase": "dashboard-next",
+  "current_step": "1-scaffold",
+  "started_at": "2026-02-25T...",
+  "notes": "Starting Next.js project scaffold"
+}
+```
+
+**`/state/dev-health.json`**
+Stall tracking:
+```json
+{ "stall_count": 0, "total_invocations": 0 }
+```
+Increment `total_invocations` every run. Increment `stall_count` if
+you made no meaningful change (no commit). Reset `stall_count` to 0
+when you make progress.
+
+**`/state/next_prompt.txt`**
+Written at the end of every invocation. The supervisor feeds this
+verbatim as the prompt to the next invocation. Be specific: what step
+you completed, what step comes next, any blockers or decisions needed.
+
+### State Safety
+
+- Write to a temp file first, then rename into place (atomic writes).
+- Back up state files to `/state/backups/` before overwriting if the
+  existing content matters.
+- If a state file is missing on startup, create it fresh and note
+  the gap in the journal.
+
+---
+
+## Invocation Discipline
+
+Every invocation must follow this sequence:
+
+1. **Read state** — Read `/state/dev-journal.md`, `dev-objectives.json`,
+   `dev-phase.json`, `dev-health.json`, and `next_prompt.txt`. Read
+   `/state/directives.json` if it exists. Understand exactly where
+   you left off before touching any code.
+
+2. **Do one unit of work** — Scaffold one component, write tests for
+   one feature, implement one endpoint, fix one bug. Don't try to
+   complete the entire implementation in one invocation.
+
+3. **Verify** — Run tests (`npm test`), start the server and confirm
+   it runs, check nothing regressed.
+
+4. **Commit** — Make atomic git commits in `/agent/` (and `/tools/`
+   if you modified Express). Clear conventional commit messages.
+
+5. **Write state** — Append journal entry, update objectives, update
+   phase, update health. These are mandatory.
+
+6. **Write `next_prompt.txt`** — Describe exactly what the next
+   invocation should do. Be specific about which implementation step,
+   which file to work in, any decisions needed.
+
+**Budget your time.** Steps 5-6 are mandatory even if you run out of
+context. An incomplete task with a journal entry and a commit is far
+better than a complete task with no record.
+
+**Stall thresholds:**
+- 3 consecutive stalls: Analyze why in the journal. Change approach.
+- 5 consecutive stalls: Pick a different step from the implementation
+  order.
+- 8 consecutive stalls: Write `disabled` to `/state/agent_enabled`.
+
+---
+
 ## What NOT to Do
 
 - Don't modify existing Express endpoints or their response formats
