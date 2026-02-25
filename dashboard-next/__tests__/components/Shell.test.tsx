@@ -36,6 +36,12 @@ jest.mock("@/lib/hooks/useDirectives", () => ({
   }),
 }));
 
+jest.mock("@/lib/hooks/useRateLimits", () => ({
+  useRateLimits: () => ({
+    data: { type: "seven_day", utilization: 0.84, status: "allowed_warning", resetsAt: null, isUsingOverage: false, surpassedThreshold: 0.75 },
+  }),
+}));
+
 jest.mock("@/lib/hooks/useStatus", () => ({
   useStatus: () => ({
     data: {

@@ -22,6 +22,7 @@ const ENABLED_FLAG = path.join(STATE_DIR, 'agent_enabled');
 const DIRECTIVES_FILE = path.join(STATE_DIR, 'directives.json');
 
 const { createDirectivesRouter } = require('./directives');
+const { createRateLimitRouter } = require('./rate-limit');
 
 app.use(express.json({ limit: '10kb' }));
 
@@ -48,6 +49,9 @@ app.use('/api', auth);
 
 // ── Directives CRUD ──────────────────────────────────────────────────────
 app.use('/api', createDirectivesRouter(DIRECTIVES_FILE));
+
+// ── Rate Limit ───────────────────────────────────────────────────────────
+app.use('/api', createRateLimitRouter(LOG_DIR));
 
 // ── Agent Model ─────────────────────────────────────────────────────────────
 const AGENT_ENV_FILE = path.join(AGENT_DIR, 'agent.env');

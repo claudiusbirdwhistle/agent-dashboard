@@ -1,6 +1,7 @@
 "use client";
 
 import { useStatus, useToggleAgent } from "@/lib/hooks/useStatus";
+import RateLimitBar from "./RateLimitBar";
 
 export default function Header() {
   const { data: status } = useStatus();
@@ -18,6 +19,9 @@ export default function Header() {
         <h1 className="text-base font-semibold text-white">Agent Dashboard</h1>
         <p className="text-xs text-zinc-500 mt-0.5">Phase: {phase}</p>
       </div>
+
+      {/* Rate Limit */}
+      <RateLimitBar />
 
       {/* KPIs */}
       <div className="flex items-center gap-6 text-sm">
