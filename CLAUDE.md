@@ -275,12 +275,48 @@ You have no memory between invocations except what you write to disk.
 All state files live in `/state/` and are prefixed `dev-`.
 
 **`/state/dev-journal.md`**
-Your running log. Append an entry every invocation recording:
-- Timestamp
-- What you did (files created/modified, tests written, commands run)
-- What broke or surprised you
-- What you committed (commit hash + message)
-- What's next
+Your running log, written in two stages each invocation.
+
+**Stage 1 — Stub (write at invocation start, before any work):**
+Immediately after reading state, append this to the journal:
+```
+## [ISO-timestamp] STARTED
+Goal: [one sentence from next_prompt.txt describing this invocation's goal]
+Status: IN PROGRESS — if no COMPLETED entry follows, this invocation ended abnormally (context exhaustion, crash, etc.)
+```
+This means: if the next invocation opens the journal and sees a `STARTED`
+entry with no matching `COMPLETED` entry after it, it knows exactly what
+was being attempted and that it didn't finish cleanly. It can decide
+whether to retry or move on.
+
+**Stage 2 — Completion (write at invocation end, after all work):**
+Append a second entry immediately after the stub:
+```
+## [ISO-timestamp] COMPLETED
+What was done: [files created/modified, tests written, commands run]
+What broke or surprised: [anything unexpected]
+Commits: [hash] [message]
+Next: [what the next invocation should do]
+```
+
+If context runs out before Stage 2 is written, the stub alone is enough
+for the next invocation to understand what happened.
+
+**Journal rotation — keeping context lean:**
+The journal is read in full at every invocation start. Left unchecked
+it becomes a context drain. After appending any entry, check the line
+count of `dev-journal.md`. If it exceeds **150 lines**:
+
+1. Identify the oldest entries (everything except the last 3 complete
+   invocation pairs — roughly the most recent 60-80 lines).
+2. Move the older entries to a monthly archive file:
+   `/state/dev-journal-archive-YYYY-MM.md` (append, don't overwrite).
+3. Rewrite `dev-journal.md` with only the recent entries.
+
+The active journal stays under ~80 lines. Archive files grow
+indefinitely but are never loaded into invocation context — they exist
+for audit purposes only. The 3-invocation recent window is enough to
+detect abnormal exits and understand current momentum.
 
 **Mandatory every invocation.** An invocation with no journal entry
 is a failed invocation.
@@ -338,30 +374,39 @@ you completed, what step comes next, any blockers or decisions needed.
 
 Every invocation must follow this sequence:
 
-1. **Read state** — Read `/state/dev-journal.md`, `dev-objectives.json`,
+1. **Read state** — Read `dev-journal.md`, `dev-objectives.json`,
    `dev-phase.json`, `dev-health.json`, and `next_prompt.txt`. Read
-   `/state/directives.json` if it exists. Understand exactly where
-   you left off before touching any code.
+   `directives.json` if it exists. Check whether the last journal
+   entry is a `STARTED` stub with no `COMPLETED` entry — if so, the
+   previous invocation ended abnormally; decide whether to retry its
+   goal or move on, and note this in your own entry.
 
-2. **Do one unit of work** — Scaffold one component, write tests for
+2. **Write journal stub** — Before touching any code, append a
+   `STARTED` entry to `dev-journal.md` (see State Files section for
+   format). This is your crash receipt: if this invocation ends
+   abnormally, the next invocation will see it and know what was
+   in progress.
+
+3. **Do one unit of work** — Scaffold one component, write tests for
    one feature, implement one endpoint, fix one bug. Don't try to
    complete the entire implementation in one invocation.
 
-3. **Verify** — Run tests (`npm test`), start the server and confirm
+4. **Verify** — Run tests (`npm test`), start the server and confirm
    it runs, check nothing regressed.
 
-4. **Commit** — Make atomic git commits in `/agent/` (and `/tools/`
+5. **Commit** — Make atomic git commits in `/agent/` (and `/tools/`
    if you modified Express). Clear conventional commit messages.
 
-5. **Write state** — Append journal entry, update objectives, update
-   phase, update health. These are mandatory.
+6. **Write state** — Append the `COMPLETED` journal entry, update
+   objectives, update phase, update health. Run journal rotation if
+   over 150 lines. These are mandatory.
 
-6. **Write `next_prompt.txt`** — Describe exactly what the next
+7. **Write `next_prompt.txt`** — Describe exactly what the next
    invocation should do. Be specific about which implementation step,
    which file to work in, any decisions needed.
 
-**Budget your time.** Steps 5-6 are mandatory even if you run out of
-context. An incomplete task with a journal entry and a commit is far
+**Budget your time.** Steps 6-7 are mandatory even if you run out of
+context. An incomplete task with a journal stub and a commit is far
 better than a complete task with no record.
 
 **Stall thresholds:**
