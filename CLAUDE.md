@@ -479,9 +479,22 @@ Every invocation must follow this sequence:
    invocation should do. Be specific about which implementation step,
    which file to work in, any decisions needed.
 
-**Budget your time.** Steps 6-7 are mandatory even if you run out of
-context. An incomplete task with a journal stub and a commit is far
-better than a complete task with no record.
+**Budget your turns — this is critical.** You have a fixed number of
+turns per invocation. The most common failure mode is spending all turns
+on implementation and leaving none for state management. The result is a
+STARTED stub with no COMPLETED entry, which forces the next invocation
+to re-orient from scratch.
+
+**Hard rule: stop implementation work by turn 18.** Use turns 19-25 for
+verification, committing, and writing state. If you are on turn 18 or
+later, do not begin any new implementation work — only wrap up, commit
+what exists, and write state. A half-finished feature with a COMPLETED
+journal entry is far more valuable than a finished feature the next
+invocation can't find.
+
+The COMPLETED entry is fast to write — five lines covering what was
+done, what was committed, and what comes next. It costs one turn and
+saves the next invocation from re-reading all context from scratch.
 
 **Stall thresholds:**
 - 3 consecutive stalls: Analyze why in the journal. Change approach.
