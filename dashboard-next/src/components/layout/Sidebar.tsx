@@ -10,27 +10,10 @@ const NAV_LINKS = [
   { label: "Files", href: "/files" },
 ];
 
-const TOOL_LINKS = [
-  { label: "Sci Trends", href: "/tools/sci-trends" },
-  { label: "Climate", href: "/tools/climate" },
-  { label: "Sea Level", href: "/tools/sea-level" },
-  { label: "Ocean Warming", href: "/tools/ocean-warming" },
-  { label: "Attention Gap", href: "/tools/attention-gap" },
-  { label: "UK Grid Decarb", href: "/tools/uk-grid-decarb" },
-  { label: "Solar Cycles", href: "/tools/solar-cycles" },
-  { label: "Exoplanets", href: "/tools/exoplanet-census" },
-  { label: "COVID Attention", href: "/tools/covid-attention" },
-  { label: "US Debt", href: "/tools/us-debt-dynamics" },
-  { label: "Currency", href: "/tools/currency-contagion" },
-  { label: "Biodiversity", href: "/tools/gbif-biodiversity" },
-  { label: "River Flow", href: "/tools/river-flow" },
-  { label: "Solar-Seismic", href: "/tools/solar-seismic" },
-];
-
 const QUICK_LINKS = [
-  { label: "Journal", href: "/files/state/journal.md" },
   { label: "Objectives", href: "/files/state/dev-objectives.json" },
   { label: "CLAUDE.md", href: "/files/agent/CLAUDE.md" },
+  { label: "Next Prompt", href: "/files/state/next_prompt.txt" },
 ];
 
 export default function Sidebar() {
@@ -79,26 +62,6 @@ export default function Sidebar() {
           ))}
         </div>
       )}
-
-      {/* Tool pages */}
-      <div className="flex flex-col gap-1">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-          Tools
-        </p>
-        {TOOL_LINKS.map(({ label, href }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`px-3 py-1.5 text-xs transition-colors rounded ${
-              pathname === href
-                ? "bg-zinc-700 text-white"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
 
       {/* Quick links */}
       <div className="flex flex-col gap-1">
