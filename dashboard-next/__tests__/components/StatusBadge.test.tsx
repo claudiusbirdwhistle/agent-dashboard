@@ -22,28 +22,28 @@ describe("StatusBadge", () => {
     expect(container.firstChild).toBeInTheDocument();
   });
 
-  it("applies orange color for pending status", () => {
+  it("applies orange styling for pending status", () => {
     const { container } = render(<StatusBadge status="pending" />);
-    expect(container.firstChild).toHaveClass("pending");
+    expect(container.firstChild).toHaveClass("text-orange-300");
   });
 
-  it("applies blue color for acknowledged status", () => {
+  it("applies blue styling for acknowledged status", () => {
     const { container } = render(<StatusBadge status="acknowledged" />);
-    expect(container.firstChild).toHaveClass("acknowledged");
+    expect(container.firstChild).toHaveClass("text-blue-300");
   });
 
-  it("applies green color for completed status", () => {
+  it("applies green styling for completed status", () => {
     const { container } = render(<StatusBadge status="completed" />);
-    expect(container.firstChild).toHaveClass("completed");
+    expect(container.firstChild).toHaveClass("text-green-300");
   });
 
-  it("applies gray color for deferred status", () => {
+  it("applies yellow styling for deferred status", () => {
     const { container } = render(<StatusBadge status="deferred" />);
-    expect(container.firstChild).toHaveClass("deferred");
+    expect(container.firstChild).toHaveClass("text-yellow-300");
   });
 
-  it("applies red color for dismissed status", () => {
+  it("applies zinc styling for dismissed status", () => {
     const { container } = render(<StatusBadge status="dismissed" />);
-    expect(container.firstChild).toHaveClass("dismissed");
+    expect(container.firstChild).toHaveClass("text-zinc-400");
   });
 });

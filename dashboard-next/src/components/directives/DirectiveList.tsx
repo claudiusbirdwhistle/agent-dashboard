@@ -8,14 +8,6 @@ interface DirectiveListProps {
   onDelete: (id: string) => void;
 }
 
-const STATUS_ORDER: DirectiveStatus[] = [
-  "pending",
-  "acknowledged",
-  "completed",
-  "deferred",
-  "dismissed",
-];
-
 const TYPE_STYLE: Record<DirectiveType, string> = {
   task: "bg-blue-950 text-blue-300 border-blue-800",
   focus: "bg-violet-950 text-violet-300 border-violet-800",
@@ -28,6 +20,23 @@ const PRIORITY_STYLE: Record<DirectivePriority, string> = {
   background: "text-zinc-500",
 };
 
+/** Sections displayed in this order; "acknowledged" gets a special active treatment. */
+const SECTION_ORDER: DirectiveStatus[] = [
+  "acknowledged",
+  "pending",
+  "deferred",
+  "completed",
+  "dismissed",
+];
+
+const SECTION_LABEL: Record<DirectiveStatus, string> = {
+  acknowledged: "Currently Working On",
+  pending: "Pending",
+  deferred: "Deferred",
+  completed: "Completed",
+  dismissed: "Dismissed",
+};
+
 function groupByStatus(directives: Directive[]): Map<DirectiveStatus, Directive[]> {
   const groups = new Map<DirectiveStatus, Directive[]>();
   for (const d of directives) {
@@ -35,7 +44,80 @@ function groupByStatus(directives: Directive[]): Map<DirectiveStatus, Directive[
     list.push(d);
     groups.set(d.status, list);
   }
+  // Sort completed items reverse chronologically (most recently completed first)
+  const completed = groups.get("completed");
+  if (completed) {
+    completed.sort((a, b) => {
+      const ta = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+      const tb = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+      return tb - ta;
+    });
+  }
   return groups;
+}
+
+function DirectiveCard({
+  d,
+  onDelete,
+  isActive,
+}: {
+  d: Directive;
+  onDelete: (id: string) => void;
+  isActive?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded border p-4 flex flex-col gap-2 ${
+        isActive
+          ? "border-cyan-700 bg-cyan-950/30"
+          : "border-zinc-800 bg-zinc-900"
+      }`}
+    >
+      {/* Header row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <StatusBadge status={d.status} />
+        <span
+          className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded border ${TYPE_STYLE[d.type]}`}
+        >
+          {d.type}
+        </span>
+        <span className={`text-xs font-medium ${PRIORITY_STYLE[d.priority]}`}>
+          {d.priority}
+        </span>
+        {d.status === "pending" && (
+          <button
+            type="button"
+            onClick={() => onDelete(d.id)}
+            aria-label="Delete directive"
+            className="ml-auto px-2 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-950 rounded border border-red-800 transition-colors"
+          >
+            Delete
+          </button>
+        )}
+      </div>
+
+      {/* Directive text */}
+      <p className="text-sm text-zinc-200 leading-snug">{d.text}</p>
+
+      {/* Agent notes */}
+      {d.agent_notes && (
+        <p className="text-xs text-zinc-500 italic border-l-2 border-zinc-700 pl-3 mt-1">
+          {d.agent_notes}
+        </p>
+      )}
+
+      {/* Timestamps */}
+      <div className="flex flex-wrap gap-3 text-[10px] text-zinc-600 mt-1">
+        <span>Created {new Date(d.created_at).toLocaleString()}</span>
+        {d.acknowledged_at && (
+          <span>Acked {new Date(d.acknowledged_at).toLocaleString()}</span>
+        )}
+        {d.completed_at && (
+          <span>Done {new Date(d.completed_at).toLocaleString()}</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function DirectiveList({ directives, onDelete }: DirectiveListProps) {
@@ -47,63 +129,28 @@ export default function DirectiveList({ directives, onDelete }: DirectiveListPro
 
   return (
     <div className="flex flex-col gap-6">
-      {STATUS_ORDER.map((status) => {
+      {SECTION_ORDER.map((status) => {
         const items = groups.get(status);
         if (!items || items.length === 0) return null;
+
+        const isActiveSection = status === "acknowledged";
+
         return (
           <section key={status} className="flex flex-col gap-3">
-            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-              {status.charAt(0).toUpperCase() + status.slice(1)} ({items.length})
+            <h3
+              className={`text-xs font-semibold uppercase tracking-wider ${
+                isActiveSection ? "text-cyan-400" : "text-zinc-500"
+              }`}
+            >
+              {SECTION_LABEL[status]} ({items.length})
             </h3>
             {items.map((d) => (
-              <div
+              <DirectiveCard
                 key={d.id}
-                className="rounded border border-zinc-800 bg-zinc-900 p-4 flex flex-col gap-2"
-              >
-                {/* Header row */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <StatusBadge status={d.status} />
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded border ${TYPE_STYLE[d.type]}`}
-                  >
-                    {d.type}
-                  </span>
-                  <span className={`text-xs font-medium ${PRIORITY_STYLE[d.priority]}`}>
-                    {d.priority}
-                  </span>
-                  {d.status === "pending" && (
-                    <button
-                      type="button"
-                      onClick={() => onDelete(d.id)}
-                      aria-label="Delete directive"
-                      className="ml-auto px-2 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-950 rounded border border-red-800 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-
-                {/* Directive text */}
-                <p className="text-sm text-zinc-200 leading-snug">{d.text}</p>
-
-                {/* Agent notes */}
-                {d.agent_notes && (
-                  <p className="text-xs text-zinc-500 italic border-l-2 border-zinc-700 pl-3 mt-1">
-                    {d.agent_notes}
-                  </p>
-                )}
-
-                {/* Timestamps */}
-                <div className="flex flex-wrap gap-3 text-[10px] text-zinc-600 mt-1">
-                  <span>Created {new Date(d.created_at).toLocaleString()}</span>
-                  {d.acknowledged_at && (
-                    <span>Acked {new Date(d.acknowledged_at).toLocaleString()}</span>
-                  )}
-                  {d.completed_at && (
-                    <span>Done {new Date(d.completed_at).toLocaleString()}</span>
-                  )}
-                </div>
-              </div>
+                d={d}
+                onDelete={onDelete}
+                isActive={isActiveSection}
+              />
             ))}
           </section>
         );

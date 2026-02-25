@@ -66,7 +66,7 @@ export default function DirectivesPage() {
           <div className="rounded border border-zinc-800 bg-zinc-900 p-5 max-w-2xl flex-1 min-w-[320px]">
             <DirectiveForm onSubmit={handleSubmit} />
           </div>
-          <div className="rounded border border-zinc-800 bg-zinc-900 p-5 w-72 shrink-0">
+          <div className="rounded border border-zinc-800 bg-zinc-900 p-5 w-80 shrink-0">
             <ModelSwitcher />
           </div>
         </div>
