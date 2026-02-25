@@ -142,6 +142,7 @@ app.get('/api/status', (req, res) => {
     totalInvocations,
     activeObjectives: activeObjectives.length,
     objectives: Array.isArray(objectives) ? objectives : [],
+    currentDirectiveId: devObj?.active?.current_directive_id || null,
     diskUsage
   });
 });

@@ -9,10 +9,12 @@ import {
   useCreateDirective,
   useDeleteDirective,
 } from "@/lib/hooks/useDirectives";
+import { useStatus } from "@/lib/hooks/useStatus";
 import type { DirectiveType, DirectivePriority } from "@/types";
 
 export default function DirectivesPage() {
   const { data: directives, isLoading, error } = useDirectives();
+  const { data: status } = useStatus();
   const createDirective = useCreateDirective();
   const deleteDirective = useDeleteDirective();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -79,7 +81,11 @@ export default function DirectivesPage() {
         {isLoading && <p className="text-sm text-zinc-500">Loading…</p>}
         {error && <p className="text-sm text-red-400">Failed to load directives.</p>}
         {directives && (
-          <DirectiveList directives={directives} onDelete={handleDelete} />
+          <DirectiveList
+            directives={directives}
+            onDelete={handleDelete}
+            currentDirectiveId={status?.currentDirectiveId}
+          />
         )}
       </section>
     </div>

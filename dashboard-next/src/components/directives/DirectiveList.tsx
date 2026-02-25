@@ -6,6 +6,7 @@ import StatusBadge from "./StatusBadge";
 interface DirectiveListProps {
   directives: Directive[];
   onDelete: (id: string) => void;
+  currentDirectiveId?: string | null;
 }
 
 const TYPE_STYLE: Record<DirectiveType, string> = {
@@ -20,8 +21,15 @@ const PRIORITY_STYLE: Record<DirectivePriority, string> = {
   background: "text-zinc-500",
 };
 
-/** Sections displayed in this order; "acknowledged" gets a special active treatment. */
-const SECTION_ORDER: DirectiveStatus[] = [
+/**
+ * Display sections. "active" is a virtual section for the single directive
+ * matching currentDirectiveId. Remaining acknowledged directives fall into
+ * the regular "acknowledged" section.
+ */
+type SectionKey = DirectiveStatus | "active";
+
+const SECTION_ORDER: SectionKey[] = [
+  "active",
   "acknowledged",
   "pending",
   "deferred",
@@ -29,21 +37,33 @@ const SECTION_ORDER: DirectiveStatus[] = [
   "dismissed",
 ];
 
-const SECTION_LABEL: Record<DirectiveStatus, string> = {
-  acknowledged: "Currently Working On",
+const SECTION_LABEL: Record<SectionKey, string> = {
+  active: "Currently Working On",
+  acknowledged: "Acknowledged",
   pending: "Pending",
   deferred: "Deferred",
   completed: "Completed",
   dismissed: "Dismissed",
 };
 
-function groupByStatus(directives: Directive[]): Map<DirectiveStatus, Directive[]> {
-  const groups = new Map<DirectiveStatus, Directive[]>();
+function groupBySection(
+  directives: Directive[],
+  currentDirectiveId: string | null | undefined,
+): Map<SectionKey, Directive[]> {
+  const groups = new Map<SectionKey, Directive[]>();
+
   for (const d of directives) {
-    const list = groups.get(d.status) ?? [];
+    // Acknowledged directives: split into "active" (the one being worked on)
+    // vs "acknowledged" (queued but not the current focus).
+    let key: SectionKey = d.status;
+    if (d.status === "acknowledged") {
+      key = currentDirectiveId && d.id === currentDirectiveId ? "active" : "acknowledged";
+    }
+    const list = groups.get(key) ?? [];
     list.push(d);
-    groups.set(d.status, list);
+    groups.set(key, list);
   }
+
   // Sort completed items reverse chronologically (most recently completed first)
   const completed = groups.get("completed");
   if (completed) {
@@ -120,29 +140,29 @@ function DirectiveCard({
   );
 }
 
-export default function DirectiveList({ directives, onDelete }: DirectiveListProps) {
+export default function DirectiveList({ directives, onDelete, currentDirectiveId }: DirectiveListProps) {
   if (directives.length === 0) {
     return <p className="text-sm text-zinc-500">No directives yet.</p>;
   }
 
-  const groups = groupByStatus(directives);
+  const groups = groupBySection(directives, currentDirectiveId);
 
   return (
     <div className="flex flex-col gap-6">
-      {SECTION_ORDER.map((status) => {
-        const items = groups.get(status);
+      {SECTION_ORDER.map((section) => {
+        const items = groups.get(section);
         if (!items || items.length === 0) return null;
 
-        const isActiveSection = status === "acknowledged";
+        const isActiveSection = section === "active";
 
         return (
-          <section key={status} className="flex flex-col gap-3">
+          <section key={section} className="flex flex-col gap-3">
             <h3
               className={`text-xs font-semibold uppercase tracking-wider ${
                 isActiveSection ? "text-cyan-400" : "text-zinc-500"
               }`}
             >
-              {SECTION_LABEL[status]} ({items.length})
+              {SECTION_LABEL[section]} ({items.length})
             </h3>
             {items.map((d) => (
               <DirectiveCard

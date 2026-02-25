@@ -26,6 +26,7 @@ export interface AgentStatus {
   stallCount: number;
   totalInvocations: number;
   activeObjectives: number;
+  currentDirectiveId: string | null;
   diskUsage: { used: string; available: string; percent: string } | null;
 }
 
