@@ -7,3 +7,4 @@ dashboard/node_modules/
 dashboard-next/node_modules/
 dashboard-next/.next/
 dashboard-next/.env.local
+agent.env
