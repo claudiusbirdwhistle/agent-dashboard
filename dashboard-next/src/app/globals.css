@@ -26,64 +26,66 @@ body {
 }
 
 /* Markdown prose rendering */
-.prose p {
-  margin-bottom: 1em;
-}
-.prose h1, .prose h2, .prose h3, .prose h4 {
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-  font-weight: 600;
-}
-.prose ul, .prose ol {
-  margin-bottom: 1em;
-  padding-left: 1.5em;
-}
-.prose li {
-  margin-bottom: 0.25em;
-}
-.prose ul { list-style-type: disc; }
-.prose ol { list-style-type: decimal; }
-.prose code {
-  background: rgb(39 39 42);
-  padding: 0.15em 0.35em;
-  border-radius: 3px;
-  font-size: 0.875em;
-}
-.prose pre {
-  background: rgb(39 39 42);
-  padding: 1em;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin-bottom: 1em;
-}
-.prose pre code {
-  background: none;
-  padding: 0;
-}
-.prose blockquote {
-  border-left: 3px solid rgb(63 63 70);
-  padding-left: 1em;
-  color: rgb(161 161 170);
-  margin-bottom: 1em;
-}
-.prose a {
-  color: rgb(147 197 253);
-  text-decoration: underline;
-}
-.prose hr {
-  border-color: rgb(63 63 70);
-  margin: 1.5em 0;
-}
-.prose table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1em;
-}
-.prose th, .prose td {
-  border: 1px solid rgb(63 63 70);
-  padding: 0.5em 0.75em;
-  text-align: left;
-}
-.prose th {
-  background: rgb(39 39 42);
+@layer base {
+  .prose p {
+    margin-bottom: 1em;
+  }
+  .prose h1, .prose h2, .prose h3, .prose h4 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+  }
+  .prose ul, .prose ol {
+    margin-bottom: 1em;
+    padding-left: 1.5em;
+  }
+  .prose li {
+    margin-bottom: 0.25em;
+  }
+  .prose ul { list-style-type: disc; }
+  .prose ol { list-style-type: decimal; }
+  .prose code {
+    background: rgb(39 39 42);
+    padding: 0.15em 0.35em;
+    border-radius: 3px;
+    font-size: 0.875em;
+  }
+  .prose pre {
+    background: rgb(39 39 42);
+    padding: 1em;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin-bottom: 1em;
+  }
+  .prose pre code {
+    background: none;
+    padding: 0;
+  }
+  .prose blockquote {
+    border-left: 3px solid rgb(63 63 70);
+    padding-left: 1em;
+    color: rgb(161 161 170);
+    margin-bottom: 1em;
+  }
+  .prose a {
+    color: rgb(147 197 253);
+    text-decoration: underline;
+  }
+  .prose hr {
+    border-color: rgb(63 63 70);
+    margin: 1.5em 0;
+  }
+  .prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+  }
+  .prose th, .prose td {
+    border: 1px solid rgb(63 63 70);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  .prose th {
+    background: rgb(39 39 42);
+  }
 }
