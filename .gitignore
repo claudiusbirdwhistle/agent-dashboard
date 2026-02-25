@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.env.local
+*.log
+.DS_Store
+dashboard/node_modules/
+dashboard-next/node_modules/
+dashboard-next/.next/
+dashboard-next/.env.local
