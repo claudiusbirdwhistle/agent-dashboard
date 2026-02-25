@@ -41,35 +41,41 @@ export default function DirectivesPage() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Directives</h1>
+    <div className="p-6 flex flex-col gap-8">
+      <h1 className="text-xl font-semibold text-zinc-100">Directives</h1>
 
       {toast && (
         <div
           role="status"
-          className={`mb-4 p-3 rounded text-sm ${
+          className={`p-3 rounded text-sm font-medium ${
             toast.type === "success"
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
+              ? "bg-green-950 border border-green-800 text-green-300"
+              : "bg-red-950 border border-red-800 text-red-300"
           }`}
         >
           {toast.message}
         </div>
       )}
 
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-3">New Directive</h2>
-        <DirectiveForm onSubmit={handleSubmit} />
+      <section>
+        <h2 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">
+          New Directive
+        </h2>
+        <div className="rounded border border-zinc-800 bg-zinc-900 p-5 max-w-2xl">
+          <DirectiveForm onSubmit={handleSubmit} />
+        </div>
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">All Directives</h2>
-        {isLoading && <p>Loading…</p>}
-        {error && <p className="text-red-600">Failed to load directives.</p>}
+        <h2 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">
+          All Directives
+        </h2>
+        {isLoading && <p className="text-sm text-zinc-500">Loading…</p>}
+        {error && <p className="text-sm text-red-400">Failed to load directives.</p>}
         {directives && (
           <DirectiveList directives={directives} onDelete={handleDelete} />
         )}
       </section>
-    </main>
+    </div>
   );
 }
