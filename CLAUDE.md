@@ -376,8 +376,8 @@ count of `dev-journal.md`. If it exceeds **150 lines**:
 
 1. Identify the oldest entries (everything except the last 3 complete
    invocation pairs — roughly the most recent 60-80 lines).
-2. Move the older entries to a monthly archive file:
-   `/state/dev-journal-archive-YYYY-MM.md` (append, don't overwrite).
+2. Move the older entries to a daily archive file:
+   `/state/dev-journal-archive-YYYY-MM-DD.md` (append, don't overwrite).
 3. Rewrite `dev-journal.md` with only the recent entries.
 
 The active journal stays under ~80 lines. Archive files grow
@@ -387,9 +387,10 @@ purposes and selective deep-context retrieval.
 If you need more historical context than the active journal provides
 (e.g. to understand why a past decision was made, or to reconstruct
 what a previous invocation attempted), you may read archive files
-selectively. Because they are split by month, you can target only the
-relevant period rather than ingesting the full history. Read only as
-much as you actually need.
+selectively. Because they are split by day, each file is small (a busy
+day produces ~100-200 lines) and you can target only the relevant date
+rather than ingesting the full history. Read only as much as you
+actually need.
 
 **Mandatory every invocation.** An invocation with no journal entry
 is a failed invocation.
