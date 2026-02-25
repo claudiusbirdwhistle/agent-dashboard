@@ -461,23 +461,36 @@ Every invocation must follow this sequence:
    abnormally, the next invocation will see it and know what was
    in progress.
 
-3. **Do one unit of work** — Scaffold one component, write tests for
+3. **Create a task list** — Use `TodoWrite` to create a checklist for
+   this invocation. The final two items must always be:
+   - `Write COMPLETED journal entry`
+   - `Update next_prompt.txt`
+   These are non-negotiable. An invocation that ends with these items
+   still unchecked has failed regardless of what else was accomplished.
+   Keep the task list short (3-5 items total) so it is completable
+   within the turn budget.
+
+4. **Do one unit of work** — Scaffold one component, write tests for
    one feature, implement one endpoint, fix one bug. Don't try to
    complete the entire implementation in one invocation.
 
-4. **Verify** — Run tests (`npm test`), start the server and confirm
-   it runs, check nothing regressed.
+5. **Verify** — Run `npm test`, confirm the server starts, check
+   nothing regressed.
 
-5. **Commit** — Make atomic git commits in `/agent/` (and `/tools/`
-   if you modified Express). Clear conventional commit messages.
+6. **Commit** — Atomic git commits with conventional messages.
 
-6. **Write state** — Append the `COMPLETED` journal entry, update
-   objectives, update phase, update health. Run journal rotation if
-   over 150 lines. These are mandatory.
+7. **Write COMPLETED journal entry** — Mark todo item done. Format:
+   ```
+   ## [ISO-timestamp] COMPLETED
+   Done: [one sentence]
+   Commits: [hash] [message]
+   Next: [one sentence]
+   ```
+   That is the entire entry. Four lines. Do not expand it.
 
-7. **Write `next_prompt.txt`** — Describe exactly what the next
-   invocation should do. Be specific about which implementation step,
-   which file to work in, any decisions needed.
+8. **Update `next_prompt.txt`** — Mark todo item done. One specific
+   sentence describing exactly what the next invocation should start
+   with.
 
 **Budget your turns — this is critical.** You have a fixed number of
 turns per invocation. The most common failure mode is spending all turns
@@ -485,16 +498,11 @@ on implementation and leaving none for state management. The result is a
 STARTED stub with no COMPLETED entry, which forces the next invocation
 to re-orient from scratch.
 
-**Hard rule: stop implementation work by turn 18.** Use turns 19-25 for
-verification, committing, and writing state. If you are on turn 18 or
-later, do not begin any new implementation work — only wrap up, commit
-what exists, and write state. A half-finished feature with a COMPLETED
-journal entry is far more valuable than a finished feature the next
-invocation can't find.
-
-The COMPLETED entry is fast to write — five lines covering what was
-done, what was committed, and what comes next. It costs one turn and
-saves the next invocation from re-reading all context from scratch.
+**Hard rule: stop implementation work by turn 15.** Use the remaining
+turns for verification, committing, and closing out your task list. If
+you are on turn 15 or later, do not begin any new implementation work.
+A half-finished feature with a COMPLETED journal entry is far more
+valuable than a finished feature the next invocation can't find.
 
 **Stall thresholds:**
 - 3 consecutive stalls: Analyze why in the journal. Change approach.
