@@ -63,23 +63,83 @@ The supervisor feeds this verbatim to the next invocation.
 
 ---
 
+## Invocation Discipline
+
+Follow this sequence at the start of every invocation.
+
+### The Sequence
+
+1. **Read state** — Read `/state/dev-objectives.json`, `/state/next_prompt.txt`,
+   and `/state/directives.json` (if it exists). Check the skills index at
+   `/state/skills/index.json` and load any skills relevant to today's work.
+   The `active` field in objectives tells you where the previous invocation
+   left off. `next_prompt.txt` tells you what to do next, or what to retry
+   if the previous invocation crashed.
+
+2. **Handle pending directives** — Process any `pending` directives in
+   `/state/directives.json` before starting other work. Acknowledge each one
+   (set `status: "acknowledged"`, `acknowledged_at: <now>`). Handle `urgent`
+   directives immediately; queue `normal` and `background` per their priority.
+   See the Directives section for the full directive handling rules.
+
+3. **Claim the work** — Overwrite `next_prompt.txt` with:
+   `"Currently working on: <id> — <one-line context>. If crashed, retry from here."`
+   Update `active.notes` in `dev-objectives.json`. Do this before touching any code.
+
+4. **Create a task list** — Use the TodoWrite tool to create a checklist for
+   this invocation. Final two items must always be:
+   - `Update dev-objectives.json (active + status)`
+   - `Update next_prompt.txt (completion)`
+   Keep the list to 3–5 items so it fits within the turn budget.
+
+5. **Do one unit of work** — One component, one endpoint, one test suite.
+   Not the whole feature. Not two features.
+
+6. **Verify** — Run tests. Confirm nothing regressed.
+
+7. **Commit** — Atomic git commit with a conventional message.
+
+8. **Update state** — Complete the final two todo items:
+   - In `dev-objectives.json`: mark objective `completed` if done; move
+     `active` to next unblocked item with fresh `notes`.
+   - Overwrite `next_prompt.txt`:
+     `"Completed: <what was done>. Next: <next objective id and first action>."`
+
+### Turn Budget
+
+**Hard rule: stop implementation work by turn 15.** Use remaining turns
+for verification, committing, and step 8. A half-finished feature with
+updated state is far more valuable than a finished feature the next
+invocation can't find.
+
+### Stall Thresholds
+
+- 3 consecutive stalls (no commit): change approach.
+- 5 consecutive stalls: pick a different objective.
+- 8 consecutive stalls: write `disabled` to `/state/agent_enabled`.
+
+### State Safety
+
+- Atomic writes: write to a temp file, then rename into place.
+- If `dev-objectives.json` is missing, reconstruct from `next_prompt.txt`
+  and the git log.
+
+---
+
 ## Skills
 
-Skills are detailed how-to guides loaded on demand. Check the index
-before starting work and load only what you need.
+Additional skills are loaded on demand by reading files from
+`/state/skills/`. Use the `Read` tool (not the `Skill` tool) to load them.
 
 **Index:** `/state/skills/index.json`
 
-Skills available:
-
 | ID | Load when |
 |----|-----------|
-| `invocation-discipline` | **Always** — load first, every invocation |
 | `git-workflow` | Before any commit, branch, or merge |
 | `tdd` | Before implementing any new feature |
 | `dashboard-next` | When working on `/agent/dashboard-next/` or Express API |
 
-To load a skill: read `/state/skills/<id>.md`.
+To load a skill: `Read` the file `/state/skills/<id>.md`.
 
 ---
 
