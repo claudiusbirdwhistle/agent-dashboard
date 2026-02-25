@@ -21,12 +21,12 @@ export interface Directive {
 
 export interface AgentStatus {
   enabled: boolean;
-  phase: string;
-  current_step: string;
-  invocations: number;
-  stalls: number;
-  disk_usage?: string;
-  objectives?: { active: number; completed: number; blocked: number };
+  processStatus: "running" | "sleeping" | "idle";
+  phase: string | null;
+  stallCount: number;
+  totalInvocations: number;
+  activeObjectives: number;
+  diskUsage: { used: string; available: string; percent: string } | null;
 }
 
 export interface FileNode {

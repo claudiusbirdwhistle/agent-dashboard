@@ -31,11 +31,12 @@ export default function HomePage() {
   const { data: status } = useStatus();
 
   const enabled = status?.enabled ?? false;
+  const processStatus = status?.processStatus ?? "idle";
   const phase = status?.phase ?? "—";
-  const step = status?.current_step ?? "—";
-  const invocations = status?.invocations ?? "—";
-  const stalls = status?.stalls ?? "—";
-  const disk = status?.disk_usage ?? "—";
+  const invocations = status?.totalInvocations ?? "—";
+  const stalls = status?.stallCount ?? "—";
+  const activeObjectives = status?.activeObjectives ?? "—";
+  const disk = status?.diskUsage ? `${status.diskUsage.used} / ${status.diskUsage.percent}` : null;
 
   return (
     <div className="p-6 flex flex-col gap-6">
@@ -47,14 +48,14 @@ export default function HomePage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <KpiCard
             label="Status"
-            value={enabled ? "Running" : "Stopped"}
+            value={enabled ? processStatus : "stopped"}
             accent={enabled ? "green" : "red"}
           />
           <KpiCard label="Phase" value={phase} />
-          <KpiCard label="Step" value={step} />
           <KpiCard label="Invocations" value={invocations} />
+          <KpiCard label="Active Goals" value={activeObjectives} />
           <KpiCard label="Stalls" value={stalls} />
-          {disk !== "—" && <KpiCard label="Disk" value={disk} />}
+          {disk && <KpiCard label="Disk" value={disk} />}
         </div>
       </section>
 
