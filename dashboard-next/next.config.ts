@@ -44,6 +44,10 @@ const nextConfig: NextConfig = {
         source: "/api/directives/:id",
         destination: `${expressUrl}/api/directives/:id`,
       },
+      {
+        source: "/api/:tool/summary",
+        destination: `${expressUrl}/api/:tool/summary`,
+      },
     ];
   },
 };
