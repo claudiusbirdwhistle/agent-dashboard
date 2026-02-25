@@ -8,8 +8,8 @@ export default function Header() {
 
   const enabled = status?.enabled ?? false;
   const phase = status?.phase ?? "—";
-  const invocations = status?.invocations ?? 0;
-  const stalls = status?.stalls ?? 0;
+  const invocations = status?.totalInvocations ?? 0;
+  const stalls = status?.stallCount ?? 0;
 
   return (
     <header className="flex items-center gap-6 px-6 py-3 bg-zinc-900 border-b border-zinc-800">
@@ -35,10 +35,10 @@ export default function Header() {
           <p className="text-zinc-500 text-xs">Stalls</p>
           <p className="text-white font-semibold">{stalls}</p>
         </div>
-        {status?.disk_usage && (
+        {status?.diskUsage && (
           <div className="text-center">
             <p className="text-zinc-500 text-xs">Disk</p>
-            <p className="text-white font-semibold">{status.disk_usage}</p>
+            <p className="text-white font-semibold">{status.diskUsage.percent}</p>
           </div>
         )}
       </div>

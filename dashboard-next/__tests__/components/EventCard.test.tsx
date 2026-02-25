@@ -1,5 +1,5 @@
 /**
- * Tests for EventCard and EventStream components
+ * Tests for EventCard component
  */
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -7,39 +7,87 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import EventCard from "@/components/live/EventCard";
 import type { LiveEvent } from "@/types";
 
-const makeEvent = (type: LiveEvent["type"], content: string): LiveEvent => ({
-  type,
-  content,
-  timestamp: new Date().toISOString(),
-});
+const systemEvent: LiveEvent = {
+  type: "system",
+  subtype: "init",
+  model: "claude-opus-4-6",
+  session_id: "abc123def456",
+  tools: ["Read", "Write", "Bash"],
+  cwd: "/agent",
+};
+
+const assistantTextEvent: LiveEvent = {
+  type: "assistant",
+  message: {
+    content: [{ type: "text", text: "Extracting helpers from the codebase..." }],
+  },
+};
+
+const assistantToolEvent: LiveEvent = {
+  type: "assistant",
+  message: {
+    content: [{ type: "tool_use", name: "Read", input: { file_path: "/agent/CLAUDE.md" } }],
+  },
+};
+
+const resultEvent: LiveEvent = {
+  type: "result",
+  subtype: "success",
+  num_turns: 12,
+  cost_usd: 0.0345,
+  duration_ms: 48200,
+  result: "Task completed successfully.",
+};
 
 describe("EventCard", () => {
-  it("renders event content", () => {
-    render(<EventCard event={makeEvent("text", "Extracting helpers...")} />);
-    expect(screen.getByText(/Extracting helpers/)).toBeInTheDocument();
-  });
-
-  it("renders system event type label", () => {
-    render(<EventCard event={makeEvent("system", "Session started")} />);
+  it("renders system event tag", () => {
+    render(<EventCard event={systemEvent} />);
     expect(screen.getByText(/system/i)).toBeInTheDocument();
   });
 
-  it("renders tool-use event type label", () => {
-    render(<EventCard event={makeEvent("tool-use", "Reading file.py")} />);
-    expect(screen.getByText(/tool/i)).toBeInTheDocument();
+  it("renders assistant text event tag", () => {
+    render(<EventCard event={assistantTextEvent} />);
+    expect(screen.getByText(/text/i)).toBeInTheDocument();
   });
 
-  it("renders error event type label", () => {
-    render(<EventCard event={makeEvent("error", "Something failed")} />);
-    expect(screen.getByText(/error/i)).toBeInTheDocument();
+  it("shows text summary in header", () => {
+    render(<EventCard event={assistantTextEvent} />);
+    expect(screen.getByText(/Extracting helpers/)).toBeInTheDocument();
   });
 
-  it("is collapsible when clicked", () => {
-    const { container } = render(
-      <EventCard event={makeEvent("text", "Long content...")} />
-    );
+  it("renders tool call event tag", () => {
+    render(<EventCard event={assistantToolEvent} />);
+    expect(screen.getByText(/tool call/i)).toBeInTheDocument();
+  });
+
+  it("shows tool name in summary", () => {
+    render(<EventCard event={assistantToolEvent} />);
+    expect(screen.getByText(/Read/)).toBeInTheDocument();
+  });
+
+  it("renders result event tag", () => {
+    render(<EventCard event={resultEvent} />);
+    expect(screen.getByText(/done/i)).toBeInTheDocument();
+  });
+
+  it("starts collapsed — body not visible", () => {
+    const { container } = render(<EventCard event={assistantTextEvent} />);
+    const pre = container.querySelector("pre");
+    expect(pre).toBeNull();
+  });
+
+  it("expands on click to show body", () => {
+    const { container } = render(<EventCard event={assistantTextEvent} />);
     const card = container.firstChild as HTMLElement;
-    // Card should render without crashing; collapse state internal
-    expect(card).toBeTruthy();
+    fireEvent.click(card);
+    expect(container.querySelector("pre")).not.toBeNull();
+  });
+
+  it("collapses again on second click", () => {
+    const { container } = render(<EventCard event={assistantTextEvent} />);
+    const card = container.firstChild as HTMLElement;
+    fireEvent.click(card);
+    fireEvent.click(card);
+    expect(container.querySelector("pre")).toBeNull();
   });
 });

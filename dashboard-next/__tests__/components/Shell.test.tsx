@@ -40,10 +40,12 @@ jest.mock("@/lib/hooks/useStatus", () => ({
   useStatus: () => ({
     data: {
       enabled: true,
+      processStatus: "running",
       phase: "dashboard-next",
-      current_step: "main-dashboard",
-      invocations: 12,
-      stalls: 0,
+      totalInvocations: 12,
+      stallCount: 0,
+      activeObjectives: 1,
+      diskUsage: null,
     },
   }),
   useToggleAgent: () => ({

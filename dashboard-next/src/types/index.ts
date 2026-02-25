@@ -38,11 +38,34 @@ export interface FileNode {
   children?: FileNode[];
 }
 
+export interface LiveContentBlock {
+  type: "text" | "tool_use" | "tool_result" | string;
+  text?: string;
+  name?: string;
+  input?: unknown;
+  content?: string | LiveContentBlock[];
+  tool_use_id?: string;
+}
+
+// Raw Claude Code stream-json event
 export interface LiveEvent {
-  type: "system" | "text" | "tool-use" | "result" | "error";
-  content: string;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
+  type: "system" | "assistant" | "user" | "result" | string;
+  subtype?: string;
+  // system init fields
+  model?: string;
+  session_id?: string;
+  tools?: string[];
+  cwd?: string;
+  // assistant / user content
+  message?: { content?: LiveContentBlock[]; model?: string };
+  content?: LiveContentBlock[] | string;
+  // result fields
+  num_turns?: number;
+  cost_usd?: number;
+  duration_ms?: number;
+  duration_api_ms?: number;
+  result?: string;
+  is_error?: boolean;
 }
 
 export interface SessionData {

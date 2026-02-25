@@ -33,7 +33,7 @@ export default function EventStream() {
   return (
     <div className="flex flex-col gap-2 overflow-y-auto max-h-[60vh] pr-1">
       {events.map((event, i) => (
-        <EventCard key={`${event.timestamp}-${i}`} event={event} />
+        <EventCard key={i} event={event} />
       ))}
     </div>
   );
