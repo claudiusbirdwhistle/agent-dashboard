@@ -3,6 +3,7 @@
 import { useState } from "react";
 import DirectiveForm from "@/components/directives/DirectiveForm";
 import DirectiveList from "@/components/directives/DirectiveList";
+import ModelSwitcher from "@/components/directives/ModelSwitcher";
 import {
   useDirectives,
   useCreateDirective,
@@ -61,8 +62,13 @@ export default function DirectivesPage() {
         <h2 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">
           New Directive
         </h2>
-        <div className="rounded border border-zinc-800 bg-zinc-900 p-5 max-w-2xl">
-          <DirectiveForm onSubmit={handleSubmit} />
+        <div className="flex gap-6 items-start flex-wrap">
+          <div className="rounded border border-zinc-800 bg-zinc-900 p-5 max-w-2xl flex-1 min-w-[320px]">
+            <DirectiveForm onSubmit={handleSubmit} />
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-900 p-5 w-72 shrink-0">
+            <ModelSwitcher />
+          </div>
         </div>
       </section>
 
