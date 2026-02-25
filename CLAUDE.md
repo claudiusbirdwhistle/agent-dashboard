@@ -21,7 +21,8 @@ file.
 | `/state/skills/` | Skill files loaded on demand (see Skills below) |
 | `/output/` | Documents, reports, artifacts. Served by the dashboard. |
 | `/tools/` | Research and analysis tool scripts |
-| `/var/log/agent/` | Invocation logs |
+| `/var/log/agent/` | Invocation logs (raw stream-json) |
+| `/var/log/agent/transcripts/` | Readable markdown transcripts (latest 5, auto-rotated) |
 
 ---
 

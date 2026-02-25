@@ -151,4 +151,7 @@ echo "=== End: $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> "${INVOCATION_LOG}"
 # Rotate logs (keep last 100)
 find "${LOG_DIR}" -name "invocation_*.log" -type f | sort | head -n -100 | xargs rm -f 2>/dev/null || true
 
+# Extract readable transcript and rotate (keep latest 5)
+"${AGENT_DIR}/rotate-transcripts.sh" "${INVOCATION_LOG}" 2>>"${LOG_DIR}/daemon.log" || true
+
 exit ${EXIT_CODE}
