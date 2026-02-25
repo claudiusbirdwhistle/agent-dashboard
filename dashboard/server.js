@@ -23,7 +23,7 @@ const DIRECTIVES_FILE = path.join(STATE_DIR, 'directives.json');
 
 const { createDirectivesRouter } = require('./directives');
 
-app.use(express.json());
+app.use(express.json({ limit: '10kb' }));
 
 // ── Sanitized markdown renderer ─────────────────────────────────────────
 

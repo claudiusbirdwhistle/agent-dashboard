@@ -40,10 +40,16 @@ function createDirectivesRouter(directivesFile) {
 
   // POST /directives — create
   router.post('/directives', (req, res) => {
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ error: 'JSON body required' });
+    }
     const { text, type, priority } = req.body;
 
     if (!text || typeof text !== 'string' || text.trim() === '') {
       return res.status(400).json({ error: 'text is required' });
+    }
+    if (text.trim().length > 2000) {
+      return res.status(400).json({ error: 'text must be 2000 characters or fewer' });
     }
     if (!VALID_TYPES.includes(type)) {
       return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` });
@@ -83,6 +89,9 @@ function createDirectivesRouter(directivesFile) {
 
   // PATCH /directives/:id — update
   router.patch('/directives/:id', (req, res) => {
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ error: 'JSON body required' });
+    }
     const { id } = req.params;
     const directives = readDirectives(directivesFile);
     const index = directives.findIndex((d) => d.id === id);
