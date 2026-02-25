@@ -123,7 +123,7 @@ app.get('/api/file', (req, res) => {
   if (!filePath) return res.status(400).json({ error: 'path required' });
   const resolved = path.resolve(filePath);
   const allowed = [OUTPUT_DIR, STATE_DIR, TOOLS_DIR, LOG_DIR, AGENT_DIR];
-  if (!allowed.some(dir => resolved.startsWith(dir + '/'))) return res.status(403).json({ error: 'Access denied' });
+  if (!allowed.some(dir => resolved === dir || resolved.startsWith(dir + '/'))) return res.status(403).json({ error: 'Access denied' });
   if (!fs.existsSync(resolved)) return res.status(404).json({ error: 'Not found' });
   const real = fs.realpathSync(resolved);
   if (!allowed.some(dir => real.startsWith(dir + '/') || real === dir)) return res.status(403).json({ error: 'Access denied (symlink)' });
