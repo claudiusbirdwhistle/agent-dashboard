@@ -221,26 +221,22 @@ export default function ToolPage() {
       </div>
 
       {/* Content */}
-      {isLoading && (
+      {isLoading ? (
         <div className="flex items-center gap-2 text-zinc-400 text-sm py-8">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-300" />
           Loading {meta?.title ?? tool} data...
         </div>
-      )}
-
-      {isError && (
+      ) : isError ? (
         <div className="rounded border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-300">
           Failed to load data: {(error as Error)?.message ?? "Unknown error"}
         </div>
-      )}
-
-      {data && !isLoading && (
+      ) : data ? (
         tool === "sci-trends" ? (
           <SciTrendsView data={data} />
         ) : (
           <GenericView data={data} />
         )
-      )}
+      ) : null}
     </div>
   );
 }
