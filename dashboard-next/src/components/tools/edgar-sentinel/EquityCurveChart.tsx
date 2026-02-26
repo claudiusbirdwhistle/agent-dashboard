@@ -1,10 +1,40 @@
 "use client";
 
 import { LineChart } from "@tremor/react";
+import type { CustomTooltipProps } from "@tremor/react";
 import type { EquityCurvePoint } from "./types";
 
 interface EquityCurveChartProps {
   data: EquityCurvePoint[] | undefined;
+}
+
+function EquityCurveTooltip({ payload, active, label }: CustomTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="bg-zinc-800 border border-zinc-700 rounded p-2 text-xs shadow-lg min-w-[180px]">
+      <p className="text-zinc-300 mb-1.5 font-medium">{label}</p>
+      {payload.map((item) => (
+        <div key={item.name} className="flex items-center gap-2 py-0.5">
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: 2,
+              backgroundColor: item.color,
+              display: "inline-block",
+              flexShrink: 0,
+            }}
+          />
+          <span className="text-zinc-400 capitalize">{String(item.name)}</span>
+          <span className="text-zinc-100 font-medium ml-auto pl-4">
+            {typeof item.value === "number"
+              ? `$${item.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+              : "-"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function EquityCurveChart({ data }: EquityCurveChartProps) {
@@ -19,13 +49,10 @@ export default function EquityCurveChart({ data }: EquityCurveChartProps) {
     );
   }
 
-  // Transform data to replace null spy values with undefined (which tremor skips)
-  // or filter categories based on whether spy data exists
   const hasSpy = data.some((point) => point.spy !== null);
   const categories = hasSpy ? ["portfolio", "spy", "equalWeight"] : ["portfolio", "equalWeight"];
   const colors = hasSpy ? ["emerald", "blue", "amber"] : ["emerald", "amber"];
 
-  // Clean data: replace null spy with undefined if needed (tremor skips undefined in categories)
   const cleanData = data.map((point) => ({
     ...point,
     spy: point.spy ?? undefined,
@@ -45,6 +72,7 @@ export default function EquityCurveChart({ data }: EquityCurveChartProps) {
           valueFormatter={(v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
           className="h-64"
           showLegend={false}
+          customTooltip={EquityCurveTooltip}
         />
         <div className="flex gap-4 mt-2 justify-center">
           <span className="text-[10px] text-emerald-400">● Portfolio</span>

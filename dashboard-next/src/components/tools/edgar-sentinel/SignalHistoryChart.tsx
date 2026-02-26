@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { LineChart } from "@tremor/react";
+import type { CustomTooltipProps } from "@tremor/react";
 import type { SignalHistoryEntry } from "./types";
 
 interface SignalHistoryChartProps {
@@ -54,6 +55,33 @@ const COLOR_TEXT: Record<string, string> = {
   red: "text-red-400 border-red-500",
   yellow: "text-yellow-400 border-yellow-500",
 };
+
+function SignalHistoryTooltip({ payload, active, label }: CustomTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="bg-zinc-800 border border-zinc-700 rounded p-2 text-xs shadow-lg min-w-[160px] max-h-72 overflow-y-auto">
+      <p className="text-zinc-300 mb-1.5 font-medium">{label}</p>
+      {payload.map((item) => (
+        <div key={item.name} className="flex items-center gap-2 py-0.5">
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: 2,
+              backgroundColor: item.color,
+              display: "inline-block",
+              flexShrink: 0,
+            }}
+          />
+          <span className="text-zinc-400">{String(item.name)}</span>
+          <span className="text-zinc-100 font-medium ml-auto pl-4">
+            {typeof item.value === "number" ? item.value.toFixed(4) : "-"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function SignalHistoryChart({ data }: SignalHistoryChartProps) {
   const [selectedTickers, setSelectedTickers] = useState<Set<string> | null>(null);
@@ -156,6 +184,7 @@ export default function SignalHistoryChart({ data }: SignalHistoryChartProps) {
             valueFormatter={(v: number) => v.toFixed(4)}
             className="h-64"
             showLegend={false}
+            customTooltip={SignalHistoryTooltip}
           />
         )}
       </div>
