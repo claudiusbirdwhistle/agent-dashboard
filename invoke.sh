@@ -63,7 +63,25 @@ if [[ -f "${AGENT_DIR}/agent.env" ]]; then
 fi
 
 MAX_TURNS="${AGENT_MAX_TURNS:-25}"
-MODEL="${AGENT_MODEL:-claude-opus-4-6}"
+
+# ── Auto model selection ──────────────────────────────────────────────────
+# When AGENT_AUTO_MODEL=true, let select-model.js pick based on task complexity.
+# Falls back to AGENT_MODEL on error or when disabled.
+
+if [[ "${AGENT_AUTO_MODEL:-}" == "true" ]]; then
+    AUTO_MODEL=$(node "${AGENT_DIR}/select-model.js" \
+        ${AGENT_MIN_MODEL:+--minimum "${AGENT_MIN_MODEL}"} \
+        2>>"${LOG_DIR}/daemon.log") || true
+    if [[ -n "${AUTO_MODEL}" ]]; then
+        MODEL="${AUTO_MODEL}"
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Auto-model selected: ${MODEL}" >> "${LOG_DIR}/daemon.log"
+    else
+        MODEL="${AGENT_MODEL:-claude-opus-4-6}"
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Auto-model failed, fallback: ${MODEL}" >> "${LOG_DIR}/daemon.log"
+    fi
+else
+    MODEL="${AGENT_MODEL:-claude-opus-4-6}"
+fi
 
 # ── Resolve Claude binary ──────────────────────────────────────────────────
 

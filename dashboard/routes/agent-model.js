@@ -43,6 +43,58 @@ function createAgentModelRouter() {
     }
   });
 
+  // --- Auto-model selection settings ---
+
+  router.get('/auto-model', (req, res) => {
+    try {
+      const content = fs.readFileSync(AGENT_ENV_FILE, 'utf-8');
+      const enabledMatch = content.match(/^AGENT_AUTO_MODEL=(.+)$/m);
+      const minMatch = content.match(/^AGENT_MIN_MODEL=(.+)$/m);
+      const enabled = enabledMatch ? enabledMatch[1].trim() === 'true' : false;
+      const minimumModel = minMatch ? minMatch[1].trim() : 'claude-sonnet-4-6';
+      res.json({ enabled, minimumModel, available: VALID_MODELS });
+    } catch (err) {
+      res.status(500).json({ error: 'Could not read agent.env' });
+    }
+  });
+
+  router.put('/auto-model', (req, res) => {
+    const { enabled, minimumModel } = req.body || {};
+    try {
+      let content = fs.readFileSync(AGENT_ENV_FILE, 'utf-8');
+
+      if (typeof enabled === 'boolean') {
+        const val = enabled ? 'true' : 'false';
+        if (content.match(/^AGENT_AUTO_MODEL=.+$/m)) {
+          content = content.replace(/^AGENT_AUTO_MODEL=.+$/m, `AGENT_AUTO_MODEL=${val}`);
+        } else {
+          content += `\nAGENT_AUTO_MODEL=${val}\n`;
+        }
+      }
+
+      if (minimumModel && VALID_MODELS.includes(minimumModel)) {
+        if (content.match(/^AGENT_MIN_MODEL=.+$/m)) {
+          content = content.replace(/^AGENT_MIN_MODEL=.+$/m, `AGENT_MIN_MODEL=${minimumModel}`);
+        } else {
+          content += `\nAGENT_MIN_MODEL=${minimumModel}\n`;
+        }
+      }
+
+      const tmp = AGENT_ENV_FILE + '.tmp';
+      fs.writeFileSync(tmp, content, 'utf-8');
+      fs.renameSync(tmp, AGENT_ENV_FILE);
+
+      const enabledMatch = content.match(/^AGENT_AUTO_MODEL=(.+)$/m);
+      const minMatch = content.match(/^AGENT_MIN_MODEL=(.+)$/m);
+      res.json({
+        enabled: enabledMatch ? enabledMatch[1].trim() === 'true' : false,
+        minimumModel: minMatch ? minMatch[1].trim() : 'claude-sonnet-4-6',
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Could not write agent.env' });
+    }
+  });
+
   return router;
 }
 

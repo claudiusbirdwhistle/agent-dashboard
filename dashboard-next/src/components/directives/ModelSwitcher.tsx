@@ -1,6 +1,7 @@
 "use client";
 
 import { useAgentModel, useSetAgentModel } from "@/lib/hooks/useAgentModel";
+import { useAutoModel, useSetAutoModel } from "@/lib/hooks/useAutoModel";
 
 const MODELS = [
   {
@@ -38,14 +39,60 @@ const MODELS = [
 export default function ModelSwitcher() {
   const { data, isLoading } = useAgentModel();
   const setModel = useSetAgentModel();
+  const { data: autoData } = useAutoModel();
+  const setAutoModel = useSetAutoModel();
 
   const currentModel = data?.model ?? "";
+  const autoEnabled = autoData?.enabled ?? false;
+  const minimumModel = autoData?.minimumModel ?? "claude-sonnet-4-6";
 
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
         Agent Model
       </p>
+
+      {/* Auto-model toggle */}
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={autoEnabled}
+          onChange={() => setAutoModel.mutate({ enabled: !autoEnabled })}
+          className="sr-only peer"
+        />
+        <span className="relative w-8 h-4 bg-zinc-700 rounded-full peer-checked:bg-amber-600 transition-colors">
+          <span
+            className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+              autoEnabled ? "translate-x-4" : ""
+            }`}
+          />
+        </span>
+        <span className="text-xs text-zinc-400">
+          Auto <span className="text-zinc-500">(by task complexity)</span>
+        </span>
+      </label>
+
+      {/* Minimum model selector — only when auto is enabled */}
+      {autoEnabled && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-zinc-500">Minimum:</span>
+          <select
+            value={minimumModel}
+            onChange={(e) =>
+              setAutoModel.mutate({ minimumModel: e.target.value })
+            }
+            className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-1.5 py-0.5"
+          >
+            {MODELS.map(({ id, label }) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Manual model buttons */}
       <div className="flex flex-col gap-1.5">
         {MODELS.map(
           ({ id, label, description, activeClass, dotClass, idleClass }) => {
@@ -55,7 +102,7 @@ export default function ModelSwitcher() {
               <button
                 key={id}
                 type="button"
-                disabled={isPending || isLoading}
+                disabled={isPending || isLoading || autoEnabled}
                 onClick={() => {
                   if (!isActive) setModel.mutate(id);
                 }}
@@ -70,7 +117,11 @@ export default function ModelSwitcher() {
                 />
                 <span className="truncate">{label}</span>
                 <span className="ml-auto text-xs font-normal opacity-60 truncate">
-                  {isActive ? "Active" : description}
+                  {isActive
+                    ? autoEnabled
+                      ? "Fallback"
+                      : "Active"
+                    : description}
                 </span>
               </button>
             );
