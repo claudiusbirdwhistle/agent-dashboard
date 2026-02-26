@@ -169,18 +169,18 @@ export default function BacktestResultsView({
         </div>
       </div>
 
-      {/* Monthly Returns */}
+      {/* Period Returns */}
       {results.monthlyReturns.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-zinc-300 mb-3">
-            Monthly Returns
+            Period Returns
           </h3>
           <div className="border border-zinc-800 rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-zinc-900 border-b border-zinc-800">
                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-zinc-500 uppercase">
-                    Month
+                    Period End
                   </th>
                   <th className="px-3 py-2 text-right text-[10px] font-semibold text-zinc-500 uppercase">
                     Strategy
