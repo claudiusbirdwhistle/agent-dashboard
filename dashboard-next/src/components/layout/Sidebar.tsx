@@ -10,6 +10,10 @@ const NAV_LINKS = [
   { label: "Files", href: "/files" },
 ];
 
+const TOOL_LINKS = [
+  { label: "EDGAR Sentinel", href: "/tools/edgar-sentinel" },
+];
+
 const QUICK_LINKS = [
   { label: "Objectives", href: "/files/state/dev-objectives.json" },
   { label: "CLAUDE.md", href: "/files/agent/CLAUDE.md" },
@@ -34,6 +38,26 @@ export default function Sidebar() {
             href={href}
             className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
               pathname === href
+                ? "bg-zinc-700 text-white"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      {/* Tools */}
+      <div className="flex flex-col gap-1">
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+          Tools
+        </p>
+        {TOOL_LINKS.map(({ label, href }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+              pathname.startsWith(href)
                 ? "bg-zinc-700 text-white"
                 : "text-zinc-400 hover:text-white hover:bg-zinc-800"
             }`}

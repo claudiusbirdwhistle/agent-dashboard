@@ -14,6 +14,7 @@
     "@tremor/react": "^3.18.7",
     "bcrypt": "^6.0.0",
     "iron-session": "^8.0.4",
+    "mermaid": "^11.12.3",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
