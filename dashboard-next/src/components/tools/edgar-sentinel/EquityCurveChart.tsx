@@ -1,6 +1,6 @@
 "use client";
 
-import { AreaChart } from "@tremor/react";
+import { LineChart } from "@tremor/react";
 import type { EquityCurvePoint } from "./types";
 
 interface EquityCurveChartProps {
@@ -37,13 +37,14 @@ export default function EquityCurveChart({ data }: EquityCurveChartProps) {
         Equity Curve
       </h3>
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-        <AreaChart
+        <LineChart
           data={cleanData}
           index="date"
           categories={categories}
           colors={colors}
           valueFormatter={(v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
           className="h-64"
+          showLegend={false}
         />
         <div className="flex gap-4 mt-2 justify-center">
           <span className="text-[10px] text-emerald-400">● Portfolio</span>

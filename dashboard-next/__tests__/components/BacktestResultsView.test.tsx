@@ -144,21 +144,27 @@ describe("EquityCurveChart", () => {
     expect(screen.getByText(/equity curve/i)).toBeInTheDocument();
   });
 
-  it("passes correct row count to AreaChart", () => {
+  it("renders a LineChart (not AreaChart) for better readability", () => {
     render(<EquityCurveChart data={equityCurveData} />);
-    const chart = screen.getByTestId("area-chart");
+    expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+    expect(screen.queryByTestId("area-chart")).not.toBeInTheDocument();
+  });
+
+  it("passes correct row count to LineChart", () => {
+    render(<EquityCurveChart data={equityCurveData} />);
+    const chart = screen.getByTestId("line-chart");
     expect(chart.getAttribute("data-rows")).toBe("3");
   });
 
   it("uses 'date' as the index field", () => {
     render(<EquityCurveChart data={equityCurveData} />);
-    const chart = screen.getByTestId("area-chart");
+    const chart = screen.getByTestId("line-chart");
     expect(chart.getAttribute("data-index")).toBe("date");
   });
 
   it("includes portfolio, spy, and equalWeight categories", () => {
     render(<EquityCurveChart data={equityCurveData} />);
-    const chart = screen.getByTestId("area-chart");
+    const chart = screen.getByTestId("line-chart");
     const categories = chart.getAttribute("data-categories") ?? "";
     expect(categories).toContain("portfolio");
     expect(categories).toContain("spy");
@@ -168,7 +174,7 @@ describe("EquityCurveChart", () => {
   it("shows 'No equity curve data' when data is empty", () => {
     render(<EquityCurveChart data={[]} />);
     expect(screen.getByText(/no equity curve data/i)).toBeInTheDocument();
-    expect(screen.queryByTestId("area-chart")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
   });
 
   it("renders nothing when data is undefined", () => {
@@ -182,7 +188,7 @@ describe("EquityCurveChart", () => {
       { date: "2024-04-01", portfolio: 11200, spy: null, equalWeight: 10900 },
     ];
     render(<EquityCurveChart data={dataWithNullSpy} />);
-    const chart = screen.getByTestId("area-chart");
+    const chart = screen.getByTestId("line-chart");
     const categories = chart.getAttribute("data-categories") ?? "";
     expect(categories).not.toContain("spy");
     expect(categories).toContain("portfolio");
@@ -313,5 +319,63 @@ describe("SignalHistoryChart", () => {
     const chart = screen.getByTestId("line-chart");
     // row count == entry count
     expect(chart.getAttribute("data-rows")).toBe("2");
+  });
+
+  // ── Ticker selector ──────────────────────────────────────────────────────
+
+  it("shows Select All and Select None buttons", () => {
+    render(<SignalHistoryChart data={signalHistoryData} />);
+    expect(screen.getByRole("button", { name: /select all/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /select none/i })).toBeInTheDocument();
+  });
+
+  it("initially all tickers are shown in chart categories", () => {
+    render(<SignalHistoryChart data={signalHistoryData} />);
+    const chart = screen.getByTestId("line-chart");
+    const categories = chart.getAttribute("data-categories") ?? "";
+    expect(categories).toContain("AAPL");
+    expect(categories).toContain("MSFT");
+    expect(categories).toContain("GOOGL");
+    expect(categories).toContain("NVDA");
+  });
+
+  it("Select None hides the chart and shows a message", () => {
+    render(<SignalHistoryChart data={signalHistoryData} />);
+    fireEvent.click(screen.getByRole("button", { name: /select none/i }));
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+    expect(screen.getByText(/select at least one ticker/i)).toBeInTheDocument();
+  });
+
+  it("Select All restores all tickers after Select None", () => {
+    render(<SignalHistoryChart data={signalHistoryData} />);
+    fireEvent.click(screen.getByRole("button", { name: /select none/i }));
+    fireEvent.click(screen.getByRole("button", { name: /select all/i }));
+    const chart = screen.getByTestId("line-chart");
+    const categories = chart.getAttribute("data-categories") ?? "";
+    expect(categories).toContain("AAPL");
+    expect(categories).toContain("NVDA");
+  });
+
+  it("clicking a ticker toggle button removes it from chart categories", () => {
+    render(<SignalHistoryChart data={signalHistoryData} />);
+    // Each ticker has a toggle button
+    const aaplButton = screen.getByRole("button", { name: "AAPL" });
+    fireEvent.click(aaplButton);
+    const chart = screen.getByTestId("line-chart");
+    const categories = chart.getAttribute("data-categories") ?? "";
+    expect(categories).not.toContain("AAPL");
+    expect(categories).toContain("MSFT");
+  });
+
+  it("clicking a deselected ticker button adds it back to chart categories", () => {
+    render(<SignalHistoryChart data={signalHistoryData} />);
+    const aaplButton = screen.getByRole("button", { name: "AAPL" });
+    // Deselect AAPL
+    fireEvent.click(aaplButton);
+    // Re-select AAPL
+    fireEvent.click(aaplButton);
+    const chart = screen.getByTestId("line-chart");
+    const categories = chart.getAttribute("data-categories") ?? "";
+    expect(categories).toContain("AAPL");
   });
 });
