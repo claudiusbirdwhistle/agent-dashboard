@@ -273,7 +273,22 @@ The Express server at port 3000 is the sole data layer.
 
 ## Idle Policy
 
-**If there are no pending or active directives and no pending work items in `dev-objectives.json`, write `"disabled"` to `/state/agent_enabled` and stop.** Do not invent work. Wait for the operator to send a new directive.
+Before self-disabling, check **both** of these:
+
+1. **No actionable directives** — no directive in `/state/directives.json`
+   has `status: "pending"` or `status: "acknowledged"` (i.e., not yet
+   `completed`/`dismissed`/`deferred`).
+2. **No pending work items** — no item in `/state/dev-objectives.json` has
+   `status: "pending"` or `status: "active"`.
+
+**Only if BOTH conditions are true**, write `"disabled"` to
+`/state/agent_enabled` and stop. Do not invent new work — wait for the
+operator to send a new directive.
+
+**If either condition is false, keep working.** Pending objectives count as
+work regardless of who created them (operator or agent) and regardless of
+priority (urgent, normal, or background). Background-priority items are
+real work — do them when nothing higher-priority remains.
 
 ---
 

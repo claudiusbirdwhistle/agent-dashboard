@@ -227,6 +227,55 @@ with open(tmp, 'w') as f:
 os.rename(tmp, health_path)
 " 2>>"${LOG_DIR}/daemon.log" || true
 
+# ── Post-invocation idle-policy safety net ─────────────────────────────
+# If the agent wrote "disabled" but there are still pending/active items in
+# dev-objectives.json or pending directives, auto-re-enable. This prevents
+# premature self-disabling when background work remains.
+
+python3 -c "
+import json, os
+
+enabled_flag = '${ENABLED_FLAG}'
+state_dir = '${STATE_DIR}'
+
+# Only check if agent just disabled itself
+try:
+    with open(enabled_flag) as f:
+        if f.read().strip() == 'enabled':
+            raise SystemExit(0)
+except FileNotFoundError:
+    raise SystemExit(0)
+
+# Check for pending objectives
+has_work = False
+try:
+    with open(os.path.join(state_dir, 'dev-objectives.json')) as f:
+        objectives = json.load(f)
+    for item in objectives.get('items', []):
+        if item.get('status') in ('pending', 'active'):
+            has_work = True
+            break
+except:
+    pass
+
+# Check for pending directives
+if not has_work:
+    try:
+        with open(os.path.join(state_dir, 'directives.json')) as f:
+            directives = json.load(f)
+        for d in directives:
+            if d.get('status') in ('pending', 'acknowledged'):
+                has_work = True
+                break
+    except:
+        pass
+
+if has_work:
+    with open(enabled_flag, 'w') as f:
+        f.write('enabled')
+    print('IDLE SAFETY NET: Agent self-disabled with pending work. Re-enabled.')
+" 2>>"${LOG_DIR}/daemon.log" || true
+
 # Rotate logs (keep last 100)
 find "${LOG_DIR}" -name "invocation_*.log" -type f | sort | head -n -100 | xargs rm -f 2>/dev/null || true
 
