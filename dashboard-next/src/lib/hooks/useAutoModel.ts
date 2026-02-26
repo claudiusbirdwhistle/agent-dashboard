@@ -38,7 +38,23 @@ export function useSetAutoModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateAutoModel,
-    onSuccess: () => {
+    onMutate: async (newSettings) => {
+      await queryClient.cancelQueries({ queryKey: ["auto-model"] });
+      const previous = queryClient.getQueryData<AutoModelResponse>(["auto-model"]);
+      queryClient.setQueryData<AutoModelResponse>(["auto-model"], (old) => ({
+        enabled: old?.enabled ?? false,
+        minimumModel: old?.minimumModel ?? "claude-sonnet-4-6",
+        ...old,
+        ...newSettings,
+      }));
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["auto-model"], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["auto-model"] });
     },
   });
