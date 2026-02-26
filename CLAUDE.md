@@ -124,17 +124,20 @@ Follow this sequence at the start of every invocation.
 
 ### Turn Budget
 
-You have ~25 max turns. The supervisor will cut you off without warning.
+You have ~30 max turns. The supervisor will cut you off without warning.
 
 | Checkpoint | Action |
 |------------|--------|
-| Turns 1–2 | Read all state (parallel). Claim work. Write `next_prompt.txt` claim. |
+| Turn 1 | Read all state (parallel — **one tool call, 5 files**). |
+| Turn 2 | Claim work: write `next_prompt.txt` + update `dev-objectives.json`. |
 | Turn 3 | TodoWrite task list. Begin work. |
-| **Turn 8** | **EARLY STATE CHECKPOINT.** Write `next_prompt.txt` with progress so far: what you've read, what you've decided, what's next. This costs 1 turn but saves the next invocation 5–10 turns if you're cut off. |
-| Turns 9–14 | Continue work. |
-| **Turn 15** | **MANDATORY PRE-WRAP STATE WRITE.** Write both `next_prompt.txt` AND update `dev-objectives.json` `active.notes`. After this point, a crash loses at most wrap-up, not discovery. |
-| **Turn 18** | **STOP implementation.** Begin wrap-up: verify, commit, final state writes. |
-| Turns 19–25 | Write final `next_prompt.txt`, update `dev-objectives.json`, update `health.json`. |
+| Turns 4–9 | First phase of implementation. |
+| **Turn 10** | **EARLY STATE CHECKPOINT.** Write `next_prompt.txt` with progress. |
+| Turns 11–20 | Continue implementation. |
+| **Turn 21** | **MANDATORY PRE-WRAP STATE WRITE.** Write `next_prompt.txt` AND `dev-objectives.json`. |
+| Turns 22–24 | Verify, commit, push. |
+| Turns 25–28 | Final state writes: `next_prompt.txt`, `dev-objectives.json`, `health.json`, directives. |
+| Turns 29–30 | Buffer for error recovery. |
 
 ### State Write Insurance
 
@@ -162,6 +165,17 @@ finished feature the next invocation can't find.
 - 3 consecutive stalls (no commit): change approach.
 - 5 consecutive stalls: pick a different objective.
 - 8 consecutive stalls: write `disabled` to `/state/agent_enabled`.
+
+### Turn Efficiency Rules
+
+- **No text-only turns.** Combine reasoning with tool calls in the same
+  turn. If you know what tool call comes next, include it — do not narrate
+  first and act second.
+- **TodoWrite: max 2 calls per invocation.** Once to create the initial
+  task list (turn 3), once to mark final completion. Do not use TodoWrite
+  for intermediate status updates — it wastes a turn each time.
+- **Batch independent reads.** When you need to read multiple unrelated
+  files, issue all Read calls in one parallel batch, not sequentially.
 
 ### State Safety
 
