@@ -5,12 +5,14 @@ import MermaidChart from "@/components/tools/edgar-sentinel/MermaidChart";
 import PipelineParams from "@/components/tools/edgar-sentinel/PipelineParams";
 import StageProgress from "@/components/tools/edgar-sentinel/StageProgress";
 import BacktestResultsView from "@/components/tools/edgar-sentinel/BacktestResultsView";
+import DbStatsPanel from "@/components/tools/edgar-sentinel/DbStatsPanel";
 import { DEFAULT_CONFIG } from "@/components/tools/edgar-sentinel/types";
 import type { PipelineConfig } from "@/components/tools/edgar-sentinel/types";
 import {
   useEdgarSentinelJob,
   useStartPipeline,
   useCancelJob,
+  useDbStats,
 } from "@/lib/hooks/useEdgarSentinel";
 
 const PIPELINE_CHART = `flowchart LR
@@ -62,6 +64,7 @@ export default function EdgarSentinelPage() {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   const { data: job } = useEdgarSentinelJob(activeJobId);
+  const { data: dbStats, isLoading: isDbStatsLoading } = useDbStats();
   const startMutation = useStartPipeline();
   const cancelMutation = useCancelJob();
 
@@ -107,6 +110,9 @@ export default function EdgarSentinelPage() {
           className="w-full overflow-x-auto [&>svg]:mx-auto"
         />
       </div>
+
+      {/* Database Stats */}
+      <DbStatsPanel stats={dbStats} isLoading={isDbStatsLoading} />
 
       {/* Parameters */}
       <div>

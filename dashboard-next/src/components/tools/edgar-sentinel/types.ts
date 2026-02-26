@@ -92,6 +92,19 @@ export interface PipelineJob {
   error?: string;
 }
 
+export interface DbStats {
+  filings: number;
+  filingSections: number;
+  sentimentResults: number;
+  similarityResults: number;
+  individualSignals: number;
+  compositeSignals: number;
+  tickers: string[];
+  dbPath: string;
+  dbExists: boolean;
+  error?: string;
+}
+
 export const DEFAULT_CONFIG: PipelineConfig = {
   ingestion: {
     tickers: "AAPL,MSFT,GOOGL,AMZN,META,NVDA,TSLA,JPM,UNH,V",

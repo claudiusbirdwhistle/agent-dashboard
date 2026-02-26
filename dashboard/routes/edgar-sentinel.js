@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const JOBS_DIR = '/tmp/edgar-sentinel-jobs';
 const RUNNER_SCRIPT = path.join('/tools', 'edgar-sentinel-runner.py');
 const EDGAR_DIR = '/agent/edgar-sentinel';
+const DB_PATH = path.join(EDGAR_DIR, 'data', 'edgar_sentinel.db');
 
 // Ensure jobs directory exists
 if (!fs.existsSync(JOBS_DIR)) {
@@ -149,6 +150,81 @@ function createEdgarSentinelRouter() {
     }
 
     res.json({ ok: true });
+  });
+
+  // GET /edgar-sentinel/db-stats — current database statistics
+  router.get('/edgar-sentinel/db-stats', (req, res) => {
+    if (!fs.existsSync(DB_PATH)) {
+      return res.json({
+        filings: 0,
+        filingSections: 0,
+        sentimentResults: 0,
+        similarityResults: 0,
+        individualSignals: 0,
+        compositeSignals: 0,
+        tickers: [],
+        dbPath: DB_PATH,
+        dbExists: false,
+      });
+    }
+
+    // Use synchronous sqlite3 via child_process so we don't add a DB dep to server.js
+    const { execSync } = require('child_process');
+    try {
+      const query = [
+        "SELECT 'filings' AS t, COUNT(*) AS n FROM filings",
+        "UNION ALL SELECT 'filing_sections', COUNT(*) FROM filing_sections",
+        "UNION ALL SELECT 'sentiment_results', COUNT(*) FROM sentiment_results",
+        "UNION ALL SELECT 'similarity_results', COUNT(*) FROM similarity_results",
+        "UNION ALL SELECT 'individual_signals', COUNT(*) FROM signals",
+        "UNION ALL SELECT 'composite_signals', COUNT(*) FROM composite_signals;",
+      ].join(' ');
+
+      const output = execSync(`sqlite3 "${DB_PATH}" "${query}"`, {
+        timeout: 5000,
+        encoding: 'utf8',
+      }).trim();
+
+      const counts = {};
+      for (const line of output.split('\n')) {
+        const [table, n] = line.split('|');
+        if (table && n !== undefined) counts[table.trim()] = parseInt(n.trim(), 10);
+      }
+
+      // Get tickers
+      const tickersOut = execSync(
+        `sqlite3 "${DB_PATH}" "SELECT DISTINCT ticker FROM filings WHERE ticker IS NOT NULL ORDER BY ticker;"`,
+        { timeout: 5000, encoding: 'utf8' }
+      ).trim();
+
+      const tickers = tickersOut ? tickersOut.split('\n').map((t) => t.trim()).filter(Boolean) : [];
+
+      return res.json({
+        filings: counts['filings'] ?? 0,
+        filingSections: counts['filing_sections'] ?? 0,
+        sentimentResults: counts['sentiment_results'] ?? 0,
+        similarityResults: counts['similarity_results'] ?? 0,
+        individualSignals: counts['individual_signals'] ?? 0,
+        compositeSignals: counts['composite_signals'] ?? 0,
+        tickers,
+        dbPath: DB_PATH,
+        dbExists: true,
+      });
+    } catch (err) {
+      // sqlite3 not installed or query failed — return zeros
+      return res.json({
+        filings: 0,
+        filingSections: 0,
+        sentimentResults: 0,
+        similarityResults: 0,
+        individualSignals: 0,
+        compositeSignals: 0,
+        tickers: [],
+        dbPath: DB_PATH,
+        dbExists: fs.existsSync(DB_PATH),
+        error: String(err.message || err).slice(0, 200),
+      });
+    }
   });
 
   return router;
