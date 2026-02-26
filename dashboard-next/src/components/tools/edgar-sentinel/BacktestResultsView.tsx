@@ -1,6 +1,9 @@
 "use client";
 
 import type { BacktestResults } from "./types";
+import EquityCurveChart from "./EquityCurveChart";
+import PortfolioHistoryView from "./PortfolioHistoryView";
+import SignalHistoryChart from "./SignalHistoryChart";
 
 function MetricCard({
   label,
@@ -288,6 +291,15 @@ export default function BacktestResultsView({
           </div>
         </div>
       )}
+
+      {/* Equity Curve Chart */}
+      <EquityCurveChart data={results.equityCurve} />
+
+      {/* Portfolio History */}
+      <PortfolioHistoryView data={results.portfolioHistory} />
+
+      {/* Signal History Chart */}
+      <SignalHistoryChart data={results.signalHistory} />
     </div>
   );
 }

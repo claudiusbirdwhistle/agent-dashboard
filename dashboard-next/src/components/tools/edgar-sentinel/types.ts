@@ -50,6 +50,37 @@ export interface StageResult {
   error?: string;
 }
 
+export interface EquityCurvePoint {
+  date: string;
+  portfolio: number;
+  spy: number | null;
+  equalWeight: number;
+}
+
+export interface PortfolioPosition {
+  ticker: string;
+  weight: number;
+  quantile: number;
+  signalScore: number;
+  leg: "long" | "short";
+  dollarValue: number;
+}
+
+export interface PortfolioSnapshot {
+  rebalanceDate: string;
+  portfolioValue: number;
+  turnover: number;
+  transactionCost: number;
+  nLong: number;
+  nShort: number;
+  positions: PortfolioPosition[];
+}
+
+export interface SignalHistoryEntry {
+  date: string;
+  signals: Array<{ ticker: string; compositeScore: number; rank: number }>;
+}
+
 export interface BacktestResults {
   strategy: {
     totalReturn: number;
@@ -79,6 +110,9 @@ export interface BacktestResults {
     compositeScore: number;
     rank: number;
   }>;
+  equityCurve?: EquityCurvePoint[];
+  portfolioHistory?: PortfolioSnapshot[];
+  signalHistory?: SignalHistoryEntry[];
 }
 
 export interface PipelineJob {
