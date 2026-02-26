@@ -1,0 +1,17 @@
+[Unit]
+Description=Autonomous Agent Next.js Dashboard
+After=network.target agent-dashboard.service
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+WorkingDirectory=/agent/dashboard-next
+ExecStart=/usr/bin/node node_modules/.bin/next start -p 3001
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/agent/dashboard-next.log
+StandardError=append:/var/log/agent/dashboard-next.log
+
+[Install]
+WantedBy=multi-user.target
