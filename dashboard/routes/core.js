@@ -42,7 +42,7 @@ function createCoreRouter() {
     const phase = readJson(path.join(STATE_DIR, 'phase.json'));
     const health = readJson(path.join(STATE_DIR, 'health.json'));
     const devObj = readJson(path.join(STATE_DIR, 'dev-objectives.json'));
-    const objectives = devObj?.items ?? readJson(path.join(STATE_DIR, 'objectives.json')) ?? [];
+    const objectives = devObj?.items ?? [];
     const activeObjectives = Array.isArray(objectives) ? objectives.filter(o => o.status === 'active') : [];
 
     let totalInvocations = health?.total_invocations || 0;
