@@ -68,8 +68,9 @@ function createEdgarSentinelRouter() {
       JSON.stringify(config, null, 2)
     );
 
-    // Spawn python runner
-    const proc = spawn('python3', [RUNNER_SCRIPT, jobDir], {
+    // Spawn python runner using the edgar-sentinel venv so all deps are available
+    const venvPython = path.join(EDGAR_DIR, 'venv', 'bin', 'python3');
+    const proc = spawn(venvPython, [RUNNER_SCRIPT, jobDir], {
       cwd: EDGAR_DIR,
       env: {
         ...process.env,
