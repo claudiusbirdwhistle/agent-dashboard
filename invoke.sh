@@ -104,6 +104,7 @@ fi
 # ── Build the prompt ────────────────────────────────────────────────────
 
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+INVOCATION_START=$(date +%s)
 INVOCATION_LOG="${LOG_DIR}/invocation_${TIMESTAMP}.log"
 
 if [[ -f "${STATE_DIR}/next_prompt.txt" ]]; then
@@ -123,6 +124,8 @@ Tools directory: ${TOOLS_DIR}
 Output directory: ${OUTPUT_DIR} (for documents/artifacts you create — these are served via the web dashboard)
 
 Remember: Read CLAUDE.md first. Then read all state files in ${STATE_DIR}/ to orient yourself. Do ONE phase of substantive work, write all state changes, then prepare for the next invocation per the instructions in CLAUDE.md.
+
+TURN BUDGET REMINDER: You have ~25 max turns. At turn 12, STOP and write a progress breadcrumb to next_prompt.txt (mid-invocation save). At turn 18, STOP implementation and begin wrap-up. The supervisor will detect if you fail to update state and flag it as a stall.
 
 Scheduling is handled by an external supervisor. Do NOT run nohup, sleep, or any scheduling commands. Your exit responsibilities are:
 1. Write /state/next_prompt.txt with context for the next invocation
@@ -165,6 +168,64 @@ EXIT_CODE=$?
 echo "" >> "${INVOCATION_LOG}"
 echo "=== Exit code: ${EXIT_CODE} ===" >> "${INVOCATION_LOG}"
 echo "=== End: $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> "${INVOCATION_LOG}"
+
+# ── Post-invocation state recovery ─────────────────────────────────────
+# If the agent failed to update next_prompt.txt, parse the invocation log
+# for rich context so the next invocation doesn't waste turns reorienting.
+
+NEXT_PROMPT_MTIME=$(stat -c %Y "${STATE_DIR}/next_prompt.txt" 2>/dev/null || echo 0)
+OBJECTIVES_MTIME=$(stat -c %Y "${STATE_DIR}/dev-objectives.json" 2>/dev/null || echo 0)
+
+if [[ "${NEXT_PROMPT_MTIME}" -lt "${INVOCATION_START}" ]]; then
+    # next_prompt.txt was NOT updated — use enhanced recovery
+    "${AGENT_DIR}/state-recovery.sh" "${INVOCATION_LOG}" "${STATE_DIR}" "${AGENT_DIR}" \
+        2>>"${LOG_DIR}/daemon.log" || {
+        # Fallback: minimal breadcrumb if recovery script fails
+        echo "WARNING: Previous invocation ended without updating state. Check git log and dev-objectives.json." \
+            > "${STATE_DIR}/next_prompt.txt"
+    }
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] STATE RECOVERY: next_prompt.txt not updated. Enhanced recovery breadcrumb written." >> "${LOG_DIR}/daemon.log"
+elif [[ "${OBJECTIVES_MTIME}" -lt "${INVOCATION_START}" ]]; then
+    # next_prompt.txt updated but dev-objectives.json wasn't — partial state write
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] PARTIAL STATE: next_prompt.txt updated but dev-objectives.json was not. Agent may have been cut off during wrap-up." >> "${LOG_DIR}/daemon.log"
+    # Append a warning to existing next_prompt.txt
+    printf '\n\nWARNING: dev-objectives.json was NOT updated last invocation. Verify active objective and status are current before starting work.' \
+        >> "${STATE_DIR}/next_prompt.txt"
+fi
+
+# ── Post-invocation health update ──────────────────────────────────────
+# Track stall count based on whether state was updated.
+
+python3 -c "
+import json, os
+from datetime import datetime, timezone
+
+health_path = '${STATE_DIR}/health.json'
+try:
+    with open(health_path) as f:
+        health = json.load(f)
+except:
+    health = {'consecutive_stalls': 0}
+
+next_mtime = os.path.getmtime('${STATE_DIR}/next_prompt.txt')
+if next_mtime < ${INVOCATION_START}:
+    health['consecutive_stalls'] = health.get('consecutive_stalls', 0) + 1
+    if health['consecutive_stalls'] >= 3:
+        health['status'] = 'stalled'
+    else:
+        health['status'] = 'degraded'
+    health['note'] = f'Invocation ended without state update ({health[\"consecutive_stalls\"]} consecutive stalls)'
+else:
+    health['consecutive_stalls'] = 0
+    # Keep existing note/status if agent set them
+
+health['last_invocation'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+tmp = health_path + '.tmp'
+with open(tmp, 'w') as f:
+    json.dump(health, f, indent=2)
+os.rename(tmp, health_path)
+" 2>>"${LOG_DIR}/daemon.log" || true
 
 # Rotate logs (keep last 100)
 find "${LOG_DIR}" -name "invocation_*.log" -type f | sort | head -n -100 | xargs rm -f 2>/dev/null || true

@@ -124,10 +124,38 @@ Follow this sequence at the start of every invocation.
 
 ### Turn Budget
 
-**Hard rule: stop implementation work by turn 15.** Use remaining turns
-for verification, committing, and step 8. A half-finished feature with
-updated state is far more valuable than a finished feature the next
-invocation can't find.
+You have ~25 max turns. The supervisor will cut you off without warning.
+
+| Checkpoint | Action |
+|------------|--------|
+| Turns 1–2 | Read all state (parallel). Claim work. Write `next_prompt.txt` claim. |
+| Turn 3 | TodoWrite task list. Begin work. |
+| **Turn 8** | **EARLY STATE CHECKPOINT.** Write `next_prompt.txt` with progress so far: what you've read, what you've decided, what's next. This costs 1 turn but saves the next invocation 5–10 turns if you're cut off. |
+| Turns 9–14 | Continue work. |
+| **Turn 15** | **MANDATORY PRE-WRAP STATE WRITE.** Write both `next_prompt.txt` AND update `dev-objectives.json` `active.notes`. After this point, a crash loses at most wrap-up, not discovery. |
+| **Turn 18** | **STOP implementation.** Begin wrap-up: verify, commit, final state writes. |
+| Turns 19–25 | Write final `next_prompt.txt`, update `dev-objectives.json`, update `health.json`. |
+
+### State Write Insurance
+
+**Every invocation must write `next_prompt.txt` at least 3 times:**
+
+1. **Claim** (turn 1–2): `"Currently working on: <id> — <context>. If crashed, retry from here."`
+2. **Progress** (turn 8): `"Working on: <id>. Done so far: <X>. Remaining: <Y>. Key files: <paths>. If crashed, resume from <specific step>."`
+3. **Completion** (turn 18+): Full rich breadcrumb with everything the next invocation needs.
+
+**Why 3 writes?** The supervisor has post-invocation recovery that parses
+the log, but it can only extract tool calls and git state — not your
+reasoning, decisions, or plan. Only YOU can write the "why" and "what next."
+The recovery script (`state-recovery.sh`) is a safety net, not a substitute
+for proper breadcrumbs.
+
+**The progress write at turn 8 is your highest-ROI action.** It costs ~30
+seconds but prevents 3–5 minutes of re-discovery if the invocation is cut
+off. Think of it as saving your game.
+
+A half-finished feature with updated state is far more valuable than a
+finished feature the next invocation can't find.
 
 ### Stall Thresholds
 
