@@ -175,6 +175,19 @@ describe("EquityCurveChart", () => {
     render(<EquityCurveChart data={undefined} />);
     expect(screen.getByText(/no equity curve data/i)).toBeInTheDocument();
   });
+
+  it("handles null spy values gracefully by excluding spy category", () => {
+    const dataWithNullSpy: EquityCurvePoint[] = [
+      { date: "2024-01-01", portfolio: 10000, spy: null, equalWeight: 10000 },
+      { date: "2024-04-01", portfolio: 11200, spy: null, equalWeight: 10900 },
+    ];
+    render(<EquityCurveChart data={dataWithNullSpy} />);
+    const chart = screen.getByTestId("area-chart");
+    const categories = chart.getAttribute("data-categories") ?? "";
+    expect(categories).not.toContain("spy");
+    expect(categories).toContain("portfolio");
+    expect(categories).toContain("equalWeight");
+  });
 });
 
 // ─── PortfolioHistoryView ────────────────────────────────────────────────────

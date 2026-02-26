@@ -1,0 +1,15 @@
+[Unit]
+Description=Autonomous Agent Supervisor
+After=network.target
+
+[Service]
+Type=simple
+User=agent
+WorkingDirectory=/agent
+ExecStart=/agent/supervisor.sh
+Restart=on-failure
+RestartSec=10
+Environment=HOME=/home/agent
+
+[Install]
+WantedBy=multi-user.target
