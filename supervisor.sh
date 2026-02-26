@@ -37,6 +37,7 @@ fi
 DELAY="${AGENT_INVOKE_DELAY:-7}"
 INACTIVITY_TIMEOUT="${AGENT_INACTIVITY_TIMEOUT:-600}"   # 10 min default
 MAX_DURATION="${AGENT_MAX_DURATION:-3600}"               # 60 min default
+HEARTBEAT_FILE="${STATE_DIR}/agent_heartbeat"
 
 log() {
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [supervisor] $*" >> "${LOG_DIR}/daemon.log"
@@ -114,13 +115,31 @@ watchdog_wait() {
             return 1
         fi
 
-        # Log inactivity timeout — only applies once current.log symlink exists
+        # Inactivity timeout — check EITHER the log OR the heartbeat file.
+        # The Claude process only writes to the log when idle between tool calls.
+        # During long-running Bash commands (data downloads, model inference, etc.)
+        # the log goes silent even though the invocation is healthy. The heartbeat
+        # file (written every 30s by a background process in invoke.sh) serves as
+        # a secondary liveness signal so the watchdog doesn't kill healthy invocations.
+        #
+        # Kill condition: BOTH log AND heartbeat are stale for > INACTIVITY_TIMEOUT.
         if [[ -L "${LOG_DIR}/current.log" ]] && [[ -e "${LOG_DIR}/current.log" ]]; then
-            local log_mtime log_age
+            local log_mtime log_age heartbeat_age=0
             log_mtime=$(stat -c %Y "${LOG_DIR}/current.log" 2>/dev/null || echo "${start_time}")
             log_age=$((now - log_mtime))
-            if [[ ${log_age} -gt ${INACTIVITY_TIMEOUT} ]]; then
-                kill_invocation "Log inactivity: no output for ${log_age}s (threshold ${INACTIVITY_TIMEOUT}s)"
+
+            # Check heartbeat file age (0 = not present, treat as stale)
+            if [[ -f "${HEARTBEAT_FILE}" ]]; then
+                local hb_mtime
+                hb_mtime=$(stat -c %Y "${HEARTBEAT_FILE}" 2>/dev/null || echo "0")
+                heartbeat_age=$((now - hb_mtime))
+            else
+                heartbeat_age=${INACTIVITY_TIMEOUT}
+            fi
+
+            # Only kill if BOTH are stale — heartbeat covers long blocking commands
+            if [[ ${log_age} -gt ${INACTIVITY_TIMEOUT} ]] && [[ ${heartbeat_age} -gt ${INACTIVITY_TIMEOUT} ]]; then
+                kill_invocation "Inactivity: log silent for ${log_age}s, heartbeat silent for ${heartbeat_age}s (threshold ${INACTIVITY_TIMEOUT}s)"
                 return 1
             fi
         fi

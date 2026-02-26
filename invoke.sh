@@ -160,6 +160,23 @@ cd "${AGENT_DIR}"
 # Prevent "nested session" detection — each invocation is independent
 unset CLAUDECODE 2>/dev/null || true
 
+# ── Start heartbeat writer ───────────────────────────────────────────────
+# The Claude process writes output only when idle between tool calls. During
+# long-running Bash commands (data downloads, etc.) the log goes silent even
+# though the invocation is healthy. A heartbeat file lets the supervisor
+# distinguish "blocked on long command" from "truly hung".
+#
+# The heartbeat process is a child of invoke.sh so pkill -P will kill it
+# when the supervisor terminates a hung invocation.
+HEARTBEAT_FILE="${STATE_DIR}/agent_heartbeat"
+(
+    while true; do
+        echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") pid=$$" > "${HEARTBEAT_FILE}"
+        sleep 30
+    done
+) &
+HEARTBEAT_PID=$!
+
 # stdbuf forces line-buffering so the log file updates in real-time
 # (without it, pipe buffering delays output by 4-8KB chunks)
 stdbuf -oL -eL "${CLAUDE_BIN}" \
@@ -172,6 +189,10 @@ stdbuf -oL -eL "${CLAUDE_BIN}" \
     2>&1 | stdbuf -oL tee -a "${INVOCATION_LOG}"
 
 EXIT_CODE=$?
+
+# Stop the heartbeat writer; remove the heartbeat file to signal clean exit
+kill "${HEARTBEAT_PID}" 2>/dev/null || true
+rm -f "${HEARTBEAT_FILE}"
 
 echo "" >> "${INVOCATION_LOG}"
 echo "=== Exit code: ${EXIT_CODE} ===" >> "${INVOCATION_LOG}"
