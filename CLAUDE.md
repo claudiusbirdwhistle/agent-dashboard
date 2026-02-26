@@ -124,28 +124,28 @@ Follow this sequence at the start of every invocation.
 
 ### Turn Budget
 
-You have ~30 max turns. The supervisor will cut you off without warning.
+You have ~60 max turns. The supervisor will cut you off without warning.
 
 | Checkpoint | Action |
 |------------|--------|
 | Turn 1 | Read all state (parallel — **one tool call, 5 files**). |
 | Turn 2 | Claim work: write `next_prompt.txt` + update `dev-objectives.json`. |
 | Turn 3 | TodoWrite task list. Begin work. |
-| Turns 4–9 | First phase of implementation. |
-| **Turn 10** | **EARLY STATE CHECKPOINT.** Write `next_prompt.txt` with progress. |
-| Turns 11–20 | Continue implementation. |
-| **Turn 21** | **MANDATORY PRE-WRAP STATE WRITE.** Write `next_prompt.txt` AND `dev-objectives.json`. |
-| Turns 22–24 | Verify, commit, push. |
-| Turns 25–28 | Final state writes: `next_prompt.txt`, `dev-objectives.json`, `health.json`, directives. |
-| Turns 29–30 | Buffer for error recovery. |
+| Turns 4–18 | First phase of implementation. |
+| **Turn 20** | **EARLY STATE CHECKPOINT.** Write `next_prompt.txt` with progress. |
+| Turns 21–40 | Continue implementation. |
+| **Turn 42** | **MANDATORY PRE-WRAP STATE WRITE.** Write `next_prompt.txt` AND `dev-objectives.json`. |
+| Turns 43–50 | Verify, commit, push. |
+| Turns 51–56 | Final state writes: `next_prompt.txt`, `dev-objectives.json`, `health.json`, directives. |
+| Turns 57–60 | Buffer for error recovery. |
 
 ### State Write Insurance
 
 **Every invocation must write `next_prompt.txt` at least 3 times:**
 
 1. **Claim** (turn 1–2): `"Currently working on: <id> — <context>. If crashed, retry from here."`
-2. **Progress** (turn 8): `"Working on: <id>. Done so far: <X>. Remaining: <Y>. Key files: <paths>. If crashed, resume from <specific step>."`
-3. **Completion** (turn 18+): Full rich breadcrumb with everything the next invocation needs.
+2. **Progress** (turn 20): `"Working on: <id>. Done so far: <X>. Remaining: <Y>. Key files: <paths>. If crashed, resume from <specific step>."`
+3. **Completion** (turn 40+): Full rich breadcrumb with everything the next invocation needs.
 
 **Why 3 writes?** The supervisor has post-invocation recovery that parses
 the log, but it can only extract tool calls and git state — not your

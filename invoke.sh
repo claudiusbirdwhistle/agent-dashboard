@@ -62,7 +62,7 @@ if [[ -f "${AGENT_DIR}/agent.env" ]]; then
     set +a
 fi
 
-MAX_TURNS="${AGENT_MAX_TURNS:-30}"
+MAX_TURNS="${AGENT_MAX_TURNS:-60}"
 
 # ── Auto model selection ──────────────────────────────────────────────────
 # When AGENT_AUTO_MODEL=true, let select-model.js pick based on task complexity.
@@ -125,7 +125,7 @@ Output directory: ${OUTPUT_DIR} (for documents/artifacts you create — these ar
 
 Remember: Read CLAUDE.md first. Then read all state files in ${STATE_DIR}/ to orient yourself. Do ONE phase of substantive work, write all state changes, then prepare for the next invocation per the instructions in CLAUDE.md.
 
-TURN BUDGET REMINDER: You have ~${MAX_TURNS} max turns. At turn 10, STOP and write a progress breadcrumb to next_prompt.txt (mid-invocation save). At turn 21, STOP implementation and begin wrap-up. The supervisor will detect if you fail to update state and flag it as a stall.
+TURN BUDGET REMINDER: You have ~${MAX_TURNS} max turns. At turn 20, STOP and write a progress breadcrumb to next_prompt.txt (mid-invocation save). At turn 42, STOP implementation and begin wrap-up. The supervisor will detect if you fail to update state and flag it as a stall.
 
 Scheduling is handled by an external supervisor. Do NOT run nohup, sleep, or any scheduling commands. Your exit responsibilities are:
 1. Write /state/next_prompt.txt with context for the next invocation
