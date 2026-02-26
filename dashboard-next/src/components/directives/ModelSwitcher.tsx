@@ -42,9 +42,12 @@ export default function ModelSwitcher() {
   const { data: autoData } = useAutoModel();
   const setAutoModel = useSetAutoModel();
 
-  const currentModel = data?.model ?? "";
+  const configuredModel = data?.model ?? "";
   const autoEnabled = autoData?.enabled ?? false;
   const minimumModel = autoData?.minimumModel ?? "claude-sonnet-4-6";
+  // When auto-model is enabled, show the live (actually running) model if available
+  const liveModel = data?.liveModel ?? "";
+  const currentModel = autoEnabled && liveModel ? liveModel : configuredModel;
 
   return (
     <div className="flex flex-col gap-2">
@@ -119,9 +122,11 @@ export default function ModelSwitcher() {
                 <span className="ml-auto text-xs font-normal opacity-60 truncate">
                   {isActive
                     ? autoEnabled
-                      ? "Fallback"
+                      ? "Live"
                       : "Active"
-                    : description}
+                    : autoEnabled && id === configuredModel
+                      ? "Default"
+                      : description}
                 </span>
               </button>
             );

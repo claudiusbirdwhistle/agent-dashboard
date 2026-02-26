@@ -83,6 +83,14 @@ else
     MODEL="${AGENT_MODEL:-claude-opus-4-6}"
 fi
 
+# Write the live model to state so the dashboard can display it
+LIVE_MODEL_TMP="${STATE_DIR}/live_model.json.tmp"
+LIVE_MODEL_FILE="${STATE_DIR}/live_model.json"
+cat > "${LIVE_MODEL_TMP}" <<EOJSON
+{"model":"${MODEL}","auto_selected":${AGENT_AUTO_MODEL:-false},"timestamp":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+EOJSON
+mv "${LIVE_MODEL_TMP}" "${LIVE_MODEL_FILE}"
+
 # ── Resolve Claude binary ──────────────────────────────────────────────────
 
 CLAUDE_BIN=""

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const AGENT_ENV_FILE = path.join('/agent', 'agent.env');
+const LIVE_MODEL_FILE = path.join('/state', 'live_model.json');
 const VALID_MODELS = ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-6'];
 const MODEL_LABELS = {
   'claude-haiku-4-5-20251001': 'Haiku',
@@ -20,7 +21,22 @@ function createAgentModelRouter() {
       const content = fs.readFileSync(AGENT_ENV_FILE, 'utf-8');
       const match = content.match(/^AGENT_MODEL=(.+)$/m);
       const model = match ? match[1].trim() : 'claude-sonnet-4-6';
-      res.json({ model, label: MODEL_LABELS[model] || model, available: VALID_MODELS });
+      const result = { model, label: MODEL_LABELS[model] || model, available: VALID_MODELS };
+
+      // Include the live model (what's actually running right now) if available
+      try {
+        const liveData = JSON.parse(fs.readFileSync(LIVE_MODEL_FILE, 'utf-8'));
+        if (liveData.model && VALID_MODELS.includes(liveData.model)) {
+          result.liveModel = liveData.model;
+          result.liveLabel = MODEL_LABELS[liveData.model] || liveData.model;
+          result.liveAutoSelected = liveData.auto_selected || false;
+          result.liveTimestamp = liveData.timestamp || null;
+        }
+      } catch (_) {
+        // No live model file — agent hasn't run yet or file was cleaned up
+      }
+
+      res.json(result);
     } catch (err) {
       res.status(500).json({ error: 'Could not read agent.env' });
     }

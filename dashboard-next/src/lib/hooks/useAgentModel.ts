@@ -6,6 +6,10 @@ interface AgentModelResponse {
   model: string;
   label: string;
   available?: string[];
+  liveModel?: string;
+  liveLabel?: string;
+  liveAutoSelected?: boolean;
+  liveTimestamp?: string;
 }
 
 async function fetchAgentModel(): Promise<AgentModelResponse> {
