@@ -18,21 +18,27 @@ jest.mock("next/link", () => {
 });
 
 // Mock hooks used inside Sidebar
-jest.mock("@/lib/hooks/useDirectives", () => ({
-  useDirectives: () => ({
-    data: [
-      {
-        id: "dir-1",
-        text: "Focus on testing",
-        type: "focus",
-        priority: "urgent",
-        status: "pending",
-        created_at: new Date().toISOString(),
-        acknowledged_at: null,
-        completed_at: null,
-        agent_notes: null,
-      },
-    ],
+jest.mock("@/lib/hooks/useTasks", () => ({
+  useTasks: () => ({
+    data: {
+      tasks: [
+        {
+          id: "dir-1",
+          text: "Focus on testing",
+          source: "user",
+          type: "focus",
+          priority: "urgent",
+          status: "pending",
+          created_at: new Date().toISOString(),
+          acknowledged_at: null,
+          completed_at: null,
+          agent_notes: null,
+          is_current: false,
+        },
+      ],
+      activeObjectiveId: null,
+      currentDirectiveId: null,
+    },
   }),
 }));
 
@@ -68,7 +74,7 @@ describe("Sidebar", () => {
   it("renders navigation links", () => {
     render(<Sidebar />);
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Directives")).toBeInTheDocument();
+    expect(screen.getByText("Tasks")).toBeInTheDocument();
     expect(screen.getByText("Files")).toBeInTheDocument();
   });
 

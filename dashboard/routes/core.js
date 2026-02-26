@@ -71,6 +71,49 @@ function createCoreRouter() {
     });
   });
 
+  // ── Unified Tasks ─────────────────────────────────────────────────────
+  router.get('/tasks', (req, res) => {
+    const directives = readJson(path.join(STATE_DIR, 'directives.json')) || [];
+    const devObj = readJson(path.join(STATE_DIR, 'dev-objectives.json'));
+    const objectives = devObj?.items ?? [];
+    const activeId = devObj?.active?.id ?? null;
+    const currentDirectiveId = devObj?.active?.current_directive_id ?? null;
+
+    // Normalize directives → unified tasks
+    const directiveTasks = (Array.isArray(directives) ? directives : []).map(d => ({
+      id: d.id,
+      text: d.text,
+      source: 'user',
+      status: d.status,
+      priority: d.priority || 'normal',
+      type: d.type || 'task',
+      created_at: d.created_at,
+      acknowledged_at: d.acknowledged_at || null,
+      completed_at: d.completed_at || null,
+      agent_notes: d.agent_notes || null,
+      is_current: !!(currentDirectiveId && currentDirectiveId === d.id),
+    }));
+
+    // Normalize objectives → unified tasks
+    const objectiveTasks = (Array.isArray(objectives) ? objectives : []).map(o => ({
+      id: o.id,
+      text: o.description,
+      source: 'agent',
+      status: o.status === 'active' ? 'acknowledged' : o.status === 'blocked' ? 'deferred' : o.status,
+      priority: 'normal',
+      type: 'task',
+      created_at: o.created_at,
+      acknowledged_at: o.status === 'active' ? o.created_at : null,
+      completed_at: o.completed_at || null,
+      agent_notes: null,
+      is_current: !!(activeId && activeId === o.id && o.status === 'active'),
+      depends_on: o.depends_on || [],
+    }));
+
+    const tasks = [...directiveTasks, ...objectiveTasks];
+    res.json({ tasks, activeObjectiveId: activeId, currentDirectiveId });
+  });
+
   // ── Toggle ──────────────────────────────────────────────────────────────
   router.post('/toggle', (req, res) => {
     const current = readFile(ENABLED_FLAG).trim();

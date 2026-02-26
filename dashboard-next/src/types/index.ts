@@ -69,6 +69,29 @@ export interface LiveEvent {
   is_error?: boolean;
 }
 
+export type TaskSource = "user" | "agent";
+
+export interface UnifiedTask {
+  id: string;
+  text: string;
+  source: TaskSource;
+  status: DirectiveStatus;
+  priority: DirectivePriority;
+  type: DirectiveType;
+  created_at: string;
+  acknowledged_at: string | null;
+  completed_at: string | null;
+  agent_notes: string | null;
+  is_current: boolean;
+  depends_on?: string[];
+}
+
+export interface TasksResponse {
+  tasks: UnifiedTask[];
+  activeObjectiveId: string | null;
+  currentDirectiveId: string | null;
+}
+
 export interface SessionData {
   username: string;
   loggedInAt: string;

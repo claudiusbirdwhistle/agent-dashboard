@@ -19,9 +19,9 @@ describe("DirectiveForm", () => {
 
   it("renders type selector buttons", () => {
     render(<DirectiveForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByRole("button", { name: /task/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /focus/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /policy/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^task$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^focus$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^policy$/i })).toBeInTheDocument();
   });
 
   it("renders priority selector buttons", () => {

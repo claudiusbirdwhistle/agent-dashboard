@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useDirectives } from "@/lib/hooks/useDirectives";
+import { useTasks } from "@/lib/hooks/useTasks";
 
 const NAV_LINKS = [
   { label: "Dashboard", href: "/" },
-  { label: "Directives", href: "/directives" },
+  { label: "Tasks", href: "/directives" },
   { label: "Files", href: "/files" },
 ];
 
@@ -18,10 +18,10 @@ const QUICK_LINKS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { data: directives } = useDirectives();
+  const { data: tasksData } = useTasks();
 
-  const pending = (directives ?? [])
-    .filter((d) => d.status === "pending")
+  const pending = (tasksData?.tasks ?? [])
+    .filter((t) => t.status === "pending")
     .slice(0, 3);
 
   return (
@@ -43,20 +43,20 @@ export default function Sidebar() {
         ))}
       </div>
 
-      {/* Pending directives */}
+      {/* Pending tasks */}
       {pending.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
             Pending ({pending.length})
           </p>
-          {pending.map((d) => (
+          {pending.map((t) => (
             <div
-              key={d.id}
+              key={`${t.source}-${t.id}`}
               className="rounded border border-orange-800 bg-orange-950 px-2 py-1.5"
             >
-              <p className="text-xs text-orange-300 line-clamp-2">{d.text}</p>
+              <p className="text-xs text-orange-300 line-clamp-2">{t.text}</p>
               <p className="text-[10px] text-orange-500 mt-0.5">
-                {d.type} · {d.priority}
+                {t.source === "user" ? "User" : "Agent"} · {t.type} · {t.priority}
               </p>
             </div>
           ))}

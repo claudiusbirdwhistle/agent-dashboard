@@ -2,21 +2,18 @@
 
 import { useState } from "react";
 import DirectiveForm from "@/components/directives/DirectiveForm";
-import DirectiveList from "@/components/directives/DirectiveList";
+import TaskList from "@/components/directives/TaskList";
 import ModelSwitcher from "@/components/directives/ModelSwitcher";
 import {
   useDirectives,
   useCreateDirective,
-  useDeleteDirective,
 } from "@/lib/hooks/useDirectives";
-import { useStatus } from "@/lib/hooks/useStatus";
+import { useTasks } from "@/lib/hooks/useTasks";
 import type { DirectiveType, DirectivePriority } from "@/types";
 
-export default function DirectivesPage() {
-  const { data: directives, isLoading, error } = useDirectives();
-  const { data: status } = useStatus();
+export default function TasksPage() {
+  const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useTasks();
   const createDirective = useCreateDirective();
-  const deleteDirective = useDeleteDirective();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   function showToast(message: string, type: "success" | "error") {
@@ -31,21 +28,15 @@ export default function DirectivesPage() {
   }) {
     try {
       await createDirective.mutateAsync(data);
-      showToast("Directive submitted", "success");
+      showToast("Task submitted", "success");
     } catch {
-      showToast("Failed to submit directive", "error");
+      showToast("Failed to submit task", "error");
     }
-  }
-
-  function handleDelete(id: string) {
-    deleteDirective.mutate(id, {
-      onError: () => showToast("Failed to delete directive", "error"),
-    });
   }
 
   return (
     <div className="p-6 flex flex-col gap-8">
-      <h1 className="text-xl font-semibold text-zinc-100">Directives</h1>
+      <h1 className="text-xl font-semibold text-zinc-100">Tasks</h1>
 
       {toast && (
         <div
@@ -62,7 +53,7 @@ export default function DirectivesPage() {
 
       <section>
         <h2 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">
-          New Directive
+          New Task
         </h2>
         <div className="flex gap-6 items-start flex-wrap">
           <div className="rounded border border-zinc-800 bg-zinc-900 p-5 max-w-2xl flex-1 min-w-[320px]">
@@ -76,16 +67,12 @@ export default function DirectivesPage() {
 
       <section>
         <h2 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">
-          All Directives
+          All Tasks
         </h2>
-        {isLoading && <p className="text-sm text-zinc-500">Loading…</p>}
-        {error && <p className="text-sm text-red-400">Failed to load directives.</p>}
-        {directives && (
-          <DirectiveList
-            directives={directives}
-            onDelete={handleDelete}
-            currentDirectiveId={status?.currentDirectiveId}
-          />
+        {tasksLoading && <p className="text-sm text-zinc-500">Loading…</p>}
+        {tasksError && <p className="text-sm text-red-400">Failed to load tasks.</p>}
+        {tasksData && (
+          <TaskList tasks={tasksData.tasks} />
         )}
       </section>
     </div>
