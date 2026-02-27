@@ -55,6 +55,22 @@ Set `active` at the start of each invocation (even if unchanged — update
 `notes`). Update it again at the end. Mark completed items with
 `status: "completed"` and `completed_at`.
 
+**`/state/blocked-tasks.json`** — Tracks objectives blocked on background tasks.
+
+```json
+[
+  {
+    "task_id": "ingest-chunk-5",
+    "objective_id": "backtest-batch-ingest",
+    "command": "python3 /tools/backtest-batch-runner.py ingest --chunk-size 100",
+    "blocked_at": "2026-02-27T20:30:00Z"
+  }
+]
+```
+
+When empty (`[]`), no objectives are blocked. See **Blocked Objectives**
+below for the full workflow.
+
 **`/state/next_prompt.txt`** — Written twice per invocation:
 
 - **Start:** `"Currently working on: <id> — <context>. If crashed, retry from here."`
@@ -81,6 +97,7 @@ Follow this sequence at the start of every invocation.
    - `/state/directives.json`
    - `/state/skills/index.json`
    - `/state/health.json`
+   - `/state/blocked-tasks.json`
 
    Do NOT read these sequentially — issue all Read calls in one turn.
    Do NOT read `/state/agent-policies.json` unless a `policy` directive
@@ -88,6 +105,12 @@ Follow this sequence at the start of every invocation.
    The `active` field in objectives tells you where the previous invocation
    left off. `next_prompt.txt` tells you what to do next, or what to retry
    if the previous invocation crashed.
+
+1b. **Check blocked tasks** — If `/state/blocked-tasks.json` is non-empty,
+   run `python3 /tools/bg-task-check.py check` to see if any background
+   tasks have completed. This may unblock objectives. If the active
+   objective was blocked and is now unblocked, resume it. If still blocked,
+   pick the next unblocked objective to work on.
 
 2. **Handle pending directives** — Process any `pending` directives in
    `/state/directives.json` before starting other work. Acknowledge each one
@@ -182,6 +205,65 @@ finished feature the next invocation can't find.
 - Atomic writes: write to a temp file, then rename into place.
 - If `dev-objectives.json` is missing, reconstruct from `next_prompt.txt`
   and the git log.
+
+---
+
+## Blocked Objectives (Background Task Model)
+
+When a task requires a long-running process (data ingestion, batch analysis,
+model training, etc.), **do not wait for it**. Instead:
+
+### Launching a Background Task
+
+```bash
+python3 /tools/bg-task-check.py launch <task-id> <objective-id> <command...>
+```
+
+This will:
+1. Run `<command>` in a **detached process group** (survives invocation kill)
+2. Register the task in `/state/blocked-tasks.json`
+3. Set the linked objective's status to `"blocked"` in `dev-objectives.json`
+
+The task's output goes to `/state/bg-tasks/<task-id>.log`. A `.status` JSON
+file appears when the task completes.
+
+### Checking Blocked Tasks
+
+At each invocation start (step 1b in The Sequence):
+
+```bash
+python3 /tools/bg-task-check.py check
+```
+
+This checks all blocked tasks and unblocks completed ones. If the active
+objective was blocked and is now unblocked, resume it. If it's still
+blocked, work on the next unblocked objective.
+
+To see detailed status without modifying state:
+
+```bash
+python3 /tools/bg-task-check.py status
+```
+
+### Workflow Example
+
+1. You need to ingest 500 tickers (takes ~30 min).
+2. Launch: `python3 /tools/bg-task-check.py launch ingest-run backtest-batch-ingest python3 /tools/backtest-batch-runner.py ingest --chunk-size 500`
+3. Objective `backtest-batch-ingest` is now `"blocked"`.
+4. Switch `active` to the next unblocked objective (e.g., mobile UI task).
+5. Work on that objective for this invocation.
+6. Next invocation: `bg-task-check.py check` finds ingestion complete → unblocks objective → resume.
+
+### Key Rules
+
+- **Never wait** for a long-running command within the invocation. Launch it
+  in the background and block the objective.
+- **One background task per objective.** If you need multiple steps, chain
+  them in the command or use a wrapper script.
+- A `"blocked"` objective is **not idle** — it has work running. Do not
+  disable the agent if blocked objectives exist.
+- Background tasks survive invocation termination because they run in a
+  separate process group via `setsid`.
 
 ---
 
@@ -280,8 +362,11 @@ Before self-disabling, check **both** of these:
    `completed`/`dismissed`/`deferred`).
 2. **No pending work items** — no item in `/state/dev-objectives.json` has
    `status: "pending"` or `status: "active"`.
+3. **No blocked tasks** — `/state/blocked-tasks.json` is empty (`[]`).
+   Blocked objectives have background work running and need the agent to
+   check back and resume when complete.
 
-**Only if BOTH conditions are true**, write `"disabled"` to
+**Only if ALL conditions are true**, write `"disabled"` to
 `/state/agent_enabled` and stop. Do not invent new work — wait for the
 operator to send a new directive.
 
