@@ -131,7 +131,7 @@ export default function SignalHistoryChart({ data }: SignalHistoryChartProps) {
       <h3 className="text-sm font-semibold text-zinc-300 mb-3">
         Signal History
       </h3>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+      <div className="bg-white border border-zinc-300 rounded-lg p-4">
         {/* Ticker selector controls */}
         <div className="mb-3">
           <div className="flex items-center gap-2 mb-2">

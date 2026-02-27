@@ -63,7 +63,7 @@ export default function EquityCurveChart({ data }: EquityCurveChartProps) {
       <h3 className="text-sm font-semibold text-zinc-300 mb-3">
         Equity Curve
       </h3>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+      <div className="bg-white border border-zinc-300 rounded-lg p-4">
         <LineChart
           data={cleanData}
           index="date"
@@ -75,9 +75,9 @@ export default function EquityCurveChart({ data }: EquityCurveChartProps) {
           customTooltip={EquityCurveTooltip}
         />
         <div className="flex gap-4 mt-2 justify-center">
-          <span className="text-[10px] text-emerald-400">● Portfolio</span>
-          {hasSpy && <span className="text-[10px] text-blue-400">● SPY</span>}
-          <span className="text-[10px] text-amber-400">● Equal-Weight</span>
+          <span className="text-[10px] text-emerald-600 font-medium">● Portfolio</span>
+          {hasSpy && <span className="text-[10px] text-blue-600 font-medium">● SPY</span>}
+          <span className="text-[10px] text-amber-600 font-medium">● Equal-Weight</span>
         </div>
       </div>
     </div>
