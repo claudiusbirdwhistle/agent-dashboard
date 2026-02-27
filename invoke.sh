@@ -281,7 +281,7 @@ try:
     with open(os.path.join(state_dir, 'dev-objectives.json')) as f:
         objectives = json.load(f)
     for item in objectives.get('items', []):
-        if item.get('status') in ('pending', 'active'):
+        if item.get('status') in ('pending', 'active', 'blocked'):
             has_work = True
             break
 except:
