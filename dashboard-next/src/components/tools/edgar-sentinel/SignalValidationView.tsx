@@ -113,13 +113,13 @@ function MultipleTestingTable({ rows }: { rows: MultipleTestingRow[] }) {
                   {row.test_name}
                 </td>
                 <td className="px-3 py-1.5 text-xs text-right font-mono text-zinc-400">
-                  {row.original_p_value.toFixed(4)}
+                  {row.original_p_value?.toFixed(4) ?? "—"}
                 </td>
                 <td className="px-3 py-1.5 text-xs text-right font-mono text-zinc-400">
-                  {row.adjusted_p_value.toFixed(4)}
+                  {row.adjusted_p_value?.toFixed(4) ?? "—"}
                 </td>
                 <td className="px-3 py-1.5 text-center">
-                  <PassFail pass={row.rejected} />
+                  <PassFail pass={row.rejected ?? false} />
                 </td>
               </tr>
             ))}
