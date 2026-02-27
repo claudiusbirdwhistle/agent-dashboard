@@ -230,6 +230,29 @@ export default function PipelineParams({
 
       {/* Backtest */}
       <Section title="4. Backtest" color="border-amber-800 bg-amber-950/30">
+        <div>
+          <Label text="Universe Source" hint="survivorship bias control" />
+          <select
+            value={config.backtest.universeSource}
+            onChange={(e) =>
+              update("backtest", {
+                universeSource: e.target.value as "static" | "sp500_historical",
+              })
+            }
+            disabled={disabled}
+            className="w-full mt-1 px-2 py-1.5 text-xs bg-zinc-800 border border-zinc-700 rounded text-zinc-200 disabled:opacity-50"
+          >
+            <option value="static">Static (tickers as entered above)</option>
+            <option value="sp500_historical">Historical S&amp;P 500 (survivorship-free)</option>
+          </select>
+          {config.backtest.universeSource === "sp500_historical" && (
+            <p className="text-[10px] text-amber-400 mt-1">
+              Uses point-in-time S&amp;P 500 membership data — only tickers that were
+              actually in the index on each rebalance date will be included.
+              Data downloaded from github.com/fja05680/sp500 on first use.
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label text="Rebalance" />

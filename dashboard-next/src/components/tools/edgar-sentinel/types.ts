@@ -25,12 +25,15 @@ export interface SignalsConfig {
   compositeMethod: "equal" | "ic_weighted" | "custom";
 }
 
+export type UniverseSource = "static" | "sp500_historical";
+
 export interface BacktestConfig {
   rebalanceFrequency: "monthly" | "quarterly";
   numQuantiles: number;
   longQuantile: number;
   shortQuantile: number | null;
   transactionCostBps: number;
+  universeSource: UniverseSource;
 }
 
 export type PipelineStage =
@@ -163,5 +166,6 @@ export const DEFAULT_CONFIG: PipelineConfig = {
     longQuantile: 1,
     shortQuantile: null,
     transactionCostBps: 10,
+    universeSource: "static" as UniverseSource,
   },
 };
