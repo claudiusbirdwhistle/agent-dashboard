@@ -25,7 +25,7 @@ export interface SignalsConfig {
   compositeMethod: "equal" | "ic_weighted" | "custom";
 }
 
-export type UniverseSource = "static" | "sp500_historical";
+export type UniverseSource = "static" | "sp500_historical" | "sp100_historical" | "sp50_historical";
 
 export interface BacktestConfig {
   rebalanceFrequency: "monthly" | "quarterly";

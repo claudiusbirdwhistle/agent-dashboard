@@ -1,6 +1,6 @@
 "use client";
 
-import type { PipelineConfig } from "./types";
+import type { PipelineConfig, UniverseSource } from "./types";
 
 interface PipelineParamsProps {
   config: PipelineConfig;
@@ -236,20 +236,31 @@ export default function PipelineParams({
             value={config.backtest.universeSource}
             onChange={(e) =>
               update("backtest", {
-                universeSource: e.target.value as "static" | "sp500_historical",
+                universeSource: e.target.value as UniverseSource,
               })
             }
             disabled={disabled}
             className="w-full mt-1 px-2 py-1.5 text-xs bg-zinc-800 border border-zinc-700 rounded text-zinc-200 disabled:opacity-50"
           >
             <option value="static">Static (tickers as entered above)</option>
-            <option value="sp500_historical">Historical S&amp;P 500 (survivorship-free)</option>
+            <option value="sp500_historical">Historical S&amp;P 500 — fully survivorship-free</option>
+            <option value="sp100_historical">Historical S&amp;P 100 — approx. survivorship-free</option>
+            <option value="sp50_historical">Historical S&amp;P 50 — approx. survivorship-free</option>
           </select>
           {config.backtest.universeSource === "sp500_historical" && (
             <p className="text-[10px] text-amber-400 mt-1">
               Uses point-in-time S&amp;P 500 membership data — only tickers that were
               actually in the index on each rebalance date will be included.
               Data downloaded from github.com/fja05680/sp500 on first use.
+            </p>
+          )}
+          {(config.backtest.universeSource === "sp100_historical" || config.backtest.universeSource === "sp50_historical") && (
+            <p className="text-[10px] text-amber-400 mt-1">
+              Uses point-in-time SP500 data filtered to a curated{" "}
+              {config.backtest.universeSource === "sp100_historical" ? "S&amp;P 100" : "S&amp;P 50"}{" "}
+              reference set. Approximately survivorship-free — prevents including
+              companies never in the SP500, with minor bias from ~5–10 historical
+              members not in current composition.
             </p>
           )}
         </div>
