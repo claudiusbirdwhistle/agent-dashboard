@@ -100,8 +100,36 @@ function createDirectivesRouter(directivesFile) {
       return res.status(404).json({ error: `Directive ${id} not found` });
     }
 
-    const { status, agent_notes } = req.body;
+    const { status, agent_notes, text, type, priority } = req.body;
     const directive = { ...directives[index] };
+
+    // text, type, priority edits are only permitted while pending
+    if (text !== undefined || type !== undefined || priority !== undefined) {
+      if (directive.status !== 'pending') {
+        return res.status(409).json({ error: 'Only pending directives can have their text/type/priority edited' });
+      }
+      if (text !== undefined) {
+        if (typeof text !== 'string' || text.trim() === '') {
+          return res.status(400).json({ error: 'text must be a non-empty string' });
+        }
+        if (text.trim().length > 2000) {
+          return res.status(400).json({ error: 'text must be 2000 characters or fewer' });
+        }
+        directive.text = text.trim();
+      }
+      if (type !== undefined) {
+        if (!VALID_TYPES.includes(type)) {
+          return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` });
+        }
+        directive.type = type;
+      }
+      if (priority !== undefined) {
+        if (!VALID_PRIORITIES.includes(priority)) {
+          return res.status(400).json({ error: `priority must be one of: ${VALID_PRIORITIES.join(', ')}` });
+        }
+        directive.priority = priority;
+      }
+    }
 
     if (status !== undefined) {
       if (!VALID_STATUSES.includes(status)) {

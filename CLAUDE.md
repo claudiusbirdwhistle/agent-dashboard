@@ -15,8 +15,8 @@ file.
 | Path | Purpose |
 |------|---------|
 | `/agent/` | Your codebase. Primary working directory. |
+| `/agent/edgar-sentinel` | The codebase of your current primary project. |
 | `/agent/dashboard-next/` | Next.js dashboard (port 3001) |
-| `/agent/dashboard/` | Legacy Express dashboard (port 3000) — do not break |
 | `/state/` | Your persistent state. Read and write here. |
 | `/state/skills/` | Skill files loaded on demand (see Skills below) |
 | `/output/` | Documents, reports, artifacts. Served by the dashboard. |
@@ -298,3 +298,4 @@ real work — do them when nothing higher-priority remains.
 - **Never break the old dashboard** (port 3000).
 - **Never commit secrets** (`.env.local`, tokens, credentials).
 - **One unit of work per invocation.** Scope creep causes stalls.
+- **When modifying the front end, always restart the server after you complete your changes.** If you fail to restart the server, the user will not see your changes.

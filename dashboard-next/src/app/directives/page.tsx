@@ -5,8 +5,9 @@ import DirectiveForm from "@/components/directives/DirectiveForm";
 import TaskList from "@/components/directives/TaskList";
 import ModelSwitcher from "@/components/directives/ModelSwitcher";
 import {
-  useDirectives,
   useCreateDirective,
+  useUpdateDirective,
+  useDeleteDirective,
 } from "@/lib/hooks/useDirectives";
 import { useTasks } from "@/lib/hooks/useTasks";
 import type { DirectiveType, DirectivePriority } from "@/types";
@@ -14,6 +15,8 @@ import type { DirectiveType, DirectivePriority } from "@/types";
 export default function TasksPage() {
   const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useTasks();
   const createDirective = useCreateDirective();
+  const updateDirective = useUpdateDirective();
+  const deleteDirective = useDeleteDirective();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   function showToast(message: string, type: "success" | "error") {
@@ -31,6 +34,27 @@ export default function TasksPage() {
       showToast("Task submitted", "success");
     } catch {
       showToast("Failed to submit task", "error");
+    }
+  }
+
+  async function handleEdit(
+    id: string,
+    data: { text: string; type: DirectiveType; priority: DirectivePriority },
+  ) {
+    try {
+      await updateDirective.mutateAsync({ id, data });
+      showToast("Task updated", "success");
+    } catch {
+      showToast("Failed to update task", "error");
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await deleteDirective.mutateAsync(id);
+      showToast("Task deleted", "success");
+    } catch {
+      showToast("Failed to delete task", "error");
     }
   }
 
@@ -72,7 +96,7 @@ export default function TasksPage() {
         {tasksLoading && <p className="text-sm text-zinc-500">Loading…</p>}
         {tasksError && <p className="text-sm text-red-400">Failed to load tasks.</p>}
         {tasksData && (
-          <TaskList tasks={tasksData.tasks} />
+          <TaskList tasks={tasksData.tasks} onEdit={handleEdit} onDelete={handleDelete} />
         )}
       </section>
     </div>
