@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useFileTree } from "@/lib/hooks/useFileTree";
 import { useFile } from "@/lib/hooks/useFile";
@@ -33,6 +33,7 @@ export default function FilesPage() {
   const absPath = resolveAbsolutePath(segments);
 
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [treeOpen, setTreeOpen] = useState(false);
 
   // If we have a path, fetch its tree
   const rootDir = segments.length > 0 ? ROOT_DIRS.find((d) => d.label === segments[0]) : null;
@@ -45,25 +46,26 @@ export default function FilesPage() {
   // When user clicks a path segment that's a file, load it directly
   const isFilePath = absPath && segments.length > 1;
 
-  function handleFileSelect(node: FileNode) {
+  const handleFileSelect = useCallback((node: FileNode) => {
     setSelectedFile(node.path);
-  }
+    setTreeOpen(false); // collapse tree on mobile after selection
+  }, []);
 
   // Root view: show the 5 directories
   if (segments.length === 0) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <h1 className="text-xl font-semibold text-zinc-100 mb-6">File Viewer</h1>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {ROOT_DIRS.map((d) => (
             <a
               key={d.label}
               href={`/files/${d.label}`}
-              className="flex flex-col items-center gap-2 p-6 rounded-lg border border-zinc-800 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800 transition-colors"
+              className="flex flex-col items-center gap-2 p-4 sm:p-6 rounded-lg border border-zinc-800 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800 transition-colors min-h-[80px]"
             >
               <span className="text-2xl">📁</span>
               <span className="text-sm font-medium text-zinc-300">{d.label}</span>
-              <span className="text-xs text-zinc-500 font-mono">{d.path}</span>
+              <span className="text-[10px] sm:text-xs text-zinc-500 font-mono truncate max-w-full">{d.path}</span>
             </a>
           ))}
         </div>
@@ -72,19 +74,31 @@ export default function FilesPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <Breadcrumbs segments={segments} />
 
-      <div className="flex gap-6">
-        {/* Sidebar: File tree */}
-        <div className="w-64 shrink-0 border border-zinc-800 rounded-lg bg-zinc-900 p-3 overflow-auto max-h-[calc(100vh-12rem)]">
-          {treeLoading ? (
-            <p className="text-sm text-zinc-500">Loading tree…</p>
-          ) : treeNodes && treeNodes.length > 0 ? (
-            <FileTree nodes={treeNodes} onSelect={handleFileSelect} />
-          ) : (
-            <p className="text-sm text-zinc-500">Empty directory</p>
-          )}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+        {/* File tree — collapsible on mobile */}
+        <div className="md:w-64 md:shrink-0">
+          <button
+            type="button"
+            onClick={() => setTreeOpen((v) => !v)}
+            className="md:hidden w-full flex items-center justify-between px-3 py-2.5 mb-2 rounded border border-zinc-800 bg-zinc-900 text-sm text-zinc-300 font-medium min-h-[44px]"
+          >
+            <span>File Tree</span>
+            <span className={`text-xs text-zinc-500 transition-transform duration-150 ${treeOpen ? "rotate-90" : ""}`}>
+              ▶
+            </span>
+          </button>
+          <div className={`border border-zinc-800 rounded-lg bg-zinc-900 p-3 overflow-auto md:max-h-[calc(100vh-12rem)] ${treeOpen ? "max-h-72" : "hidden md:block md:max-h-[calc(100vh-12rem)]"}`}>
+            {treeLoading ? (
+              <p className="text-sm text-zinc-500">Loading tree…</p>
+            ) : treeNodes && treeNodes.length > 0 ? (
+              <FileTree nodes={treeNodes} onSelect={handleFileSelect} />
+            ) : (
+              <p className="text-sm text-zinc-500">Empty directory</p>
+            )}
+          </div>
         </div>
 
         {/* Main: File content */}

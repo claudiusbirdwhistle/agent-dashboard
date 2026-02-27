@@ -20,7 +20,11 @@ const QUICK_LINKS = [
   { label: "Next Prompt", href: "/files/state/next_prompt.txt" },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export default function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const { data: tasksData } = useTasks();
 
@@ -30,13 +34,27 @@ export default function Sidebar() {
 
   return (
     <nav className="flex flex-col gap-6 w-52 shrink-0 py-6 px-4 bg-zinc-900 border-r border-zinc-800 min-h-screen">
-      {/* Nav links */}
+      {/* Close button — mobile only */}
+      <button
+        type="button"
+        onClick={onNavigate}
+        className="md:hidden self-end p-2 -mt-2 -mr-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+        aria-label="Close menu"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="4" y1="4" x2="14" y2="14" />
+          <line x1="14" y1="4" x2="4" y2="14" />
+        </svg>
+      </button>
+
+      {/* Nav links — 44px min touch targets */}
       <div className="flex flex-col gap-1">
         {NAV_LINKS.map(({ label, href }) => (
           <Link
             key={href}
             href={href}
-            className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+            onClick={onNavigate}
+            className={`px-3 py-2.5 rounded text-sm font-medium transition-colors min-h-[44px] flex items-center ${
               pathname === href
                 ? "bg-zinc-700 text-white"
                 : "text-zinc-400 hover:text-white hover:bg-zinc-800"
@@ -49,14 +67,15 @@ export default function Sidebar() {
 
       {/* Tools */}
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-3">
           Tools
         </p>
         {TOOL_LINKS.map(({ label, href }) => (
           <Link
             key={href}
             href={href}
-            className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+            onClick={onNavigate}
+            className={`px-3 py-2.5 rounded text-sm font-medium transition-colors min-h-[44px] flex items-center ${
               pathname.startsWith(href)
                 ? "bg-zinc-700 text-white"
                 : "text-zinc-400 hover:text-white hover:bg-zinc-800"
@@ -96,7 +115,8 @@ export default function Sidebar() {
           <Link
             key={href}
             href={href}
-            className="px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+            onClick={onNavigate}
+            className="px-3 py-2 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors min-h-[40px] flex items-center"
           >
             {label}
           </Link>

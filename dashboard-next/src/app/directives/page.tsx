@@ -59,7 +59,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="p-6 flex flex-col gap-8">
+    <div className="p-4 sm:p-6 flex flex-col gap-6 sm:gap-8">
       <h1 className="text-xl font-semibold text-zinc-100">Tasks</h1>
 
       {toast && (
@@ -79,11 +79,11 @@ export default function TasksPage() {
         <h2 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">
           New Task
         </h2>
-        <div className="flex gap-6 items-start flex-wrap">
-          <div className="rounded border border-zinc-800 bg-zinc-900 p-5 max-w-2xl flex-1 min-w-[320px]">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch lg:items-start">
+          <div className="rounded border border-zinc-800 bg-zinc-900 p-4 sm:p-5 max-w-2xl flex-1">
             <DirectiveForm onSubmit={handleSubmit} />
           </div>
-          <div className="rounded border border-zinc-800 bg-zinc-900 p-5 w-80 shrink-0">
+          <div className="rounded border border-zinc-800 bg-zinc-900 p-4 sm:p-5 lg:w-80 lg:shrink-0">
             <ModelSwitcher />
           </div>
         </div>

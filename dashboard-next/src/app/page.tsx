@@ -20,9 +20,9 @@ function KpiCard({
   const color = colorMap[accent ?? "zinc"];
 
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-900 px-5 py-4 flex flex-col gap-1">
-      <p className="text-xs text-zinc-500 uppercase tracking-wider">{label}</p>
-      <p className={`text-2xl font-bold ${color}`}>{value}</p>
+    <div className="rounded border border-zinc-800 bg-zinc-900 px-3 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
+      <p className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">{label}</p>
+      <p className={`text-lg sm:text-2xl font-bold truncate ${color}`}>{value}</p>
     </div>
   );
 }
@@ -39,7 +39,7 @@ export default function HomePage() {
   const disk = status?.diskUsage ? `${status.diskUsage.used} / ${status.diskUsage.percent}` : null;
 
   return (
-    <div className="p-6 flex flex-col gap-6">
+    <div className="p-4 sm:p-6 flex flex-col gap-4 sm:gap-6">
       {/* KPI grid */}
       <section>
         <h2 className="text-sm font-semibold text-zinc-400 mb-3 uppercase tracking-wider">
