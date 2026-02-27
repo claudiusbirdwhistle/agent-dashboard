@@ -52,6 +52,7 @@ function createEdgarSentinelRouter() {
         { stage: 'analysis', status: 'pending' },
         { stage: 'signals', status: 'pending' },
         { stage: 'backtest', status: 'pending' },
+        { stage: 'validation', status: 'pending' },
       ],
       results: null,
       startedAt: new Date().toISOString(),

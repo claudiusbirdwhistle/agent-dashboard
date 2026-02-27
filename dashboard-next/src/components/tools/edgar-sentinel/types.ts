@@ -42,6 +42,7 @@ export type PipelineStage =
   | "analysis"
   | "signals"
   | "backtest"
+  | "validation"
   | "complete"
   | "failed";
 
@@ -84,6 +85,60 @@ export interface SignalHistoryEntry {
   signals: Array<{ ticker: string; compositeScore: number; rank: number }>;
 }
 
+// --- Signal Validation Result Types ---
+
+export interface ValidationTestResult {
+  beta?: number;
+  t_stat?: number;
+  p_value?: number;
+  r_squared?: number;
+  n_obs?: number;
+  mean_ic?: number;
+  ic_std?: number;
+  ir?: number;
+  pct_positive?: number;
+  n_periods?: number;
+  mean_coefficient?: number;
+  fm_t_stat?: number;
+  test_statistic?: number;
+  bucket_means?: Record<string, number>;
+  spread_mean?: number;
+  spread_t_stat?: number;
+  spread_p_value?: number;
+  spread_sharpe?: number;
+  jt_statistic?: number;
+  jt_p_value?: number;
+  oos_r_squared?: number;
+  directional_hit_rate?: number;
+  oos_sharpe?: number;
+  is_r_squared?: number;
+  overfit_flag?: boolean;
+  n_test_obs?: number;
+  n_windows?: number;
+}
+
+export interface MultipleTestingRow {
+  test_name: string;
+  original_p_value: number;
+  adjusted_p_value: number;
+  rejected: boolean;
+}
+
+export interface SignalValidationResults {
+  skipped?: boolean;
+  error?: string;
+  summary_text?: string;
+  ols_results?: Record<string, ValidationTestResult>;
+  ic_results?: Record<string, ValidationTestResult>;
+  portfolio_sort_results?: Record<string, ValidationTestResult>;
+  fama_macbeth_results?: Record<string, ValidationTestResult>;
+  granger_results?: Record<string, ValidationTestResult>;
+  subgroup_results?: Record<string, Record<string, ValidationTestResult>>;
+  placebo_results?: Record<string, unknown>;
+  multiple_testing_table?: MultipleTestingRow[];
+  oos_results?: Record<string, ValidationTestResult>;
+}
+
 export interface BacktestResults {
   strategy: {
     totalReturn: number;
@@ -116,6 +171,7 @@ export interface BacktestResults {
   equityCurve?: EquityCurvePoint[];
   portfolioHistory?: PortfolioSnapshot[];
   signalHistory?: SignalHistoryEntry[];
+  signalValidation?: SignalValidationResults;
 }
 
 export interface PipelineJob {

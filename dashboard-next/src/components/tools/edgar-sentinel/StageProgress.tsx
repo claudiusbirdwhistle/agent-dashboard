@@ -8,6 +8,7 @@ const STAGE_META: Record<string, { label: string; color: string }> = {
   analysis: { label: "Analysis", color: "purple" },
   signals: { label: "Signal Generation", color: "green" },
   backtest: { label: "Backtest", color: "amber" },
+  validation: { label: "Signal Validation", color: "cyan" },
 };
 
 function StatusDot({ status }: { status: StageResult["status"] }) {

@@ -5,6 +5,7 @@ import MermaidChart from "@/components/tools/edgar-sentinel/MermaidChart";
 import PipelineParams from "@/components/tools/edgar-sentinel/PipelineParams";
 import StageProgress from "@/components/tools/edgar-sentinel/StageProgress";
 import BacktestResultsView from "@/components/tools/edgar-sentinel/BacktestResultsView";
+import SignalValidationView from "@/components/tools/edgar-sentinel/SignalValidationView";
 import DbStatsPanel from "@/components/tools/edgar-sentinel/DbStatsPanel";
 import { DEFAULT_CONFIG } from "@/components/tools/edgar-sentinel/types";
 import type { PipelineConfig } from "@/components/tools/edgar-sentinel/types";
@@ -52,12 +53,21 @@ const PIPELINE_CHART = `flowchart LR
     PORT --> RET --> METRICS
   end
 
-  ing --> ana --> sig --> bt
+  subgraph val["5. Validation"]
+    direction TB
+    OLS["OLS + IC\\nRegression"]
+    SORT["Portfolio Sorts\\nFama-MacBeth"]
+    OOS["OOS + Granger\\nRobustness"]
+    OLS --> SORT --> OOS
+  end
+
+  ing --> ana --> sig --> bt --> val
 
   style ing fill:#172554,stroke:#1e40af,color:#93c5fd
   style ana fill:#2e1065,stroke:#6b21a8,color:#c4b5fd
   style sig fill:#052e16,stroke:#15803d,color:#86efac
-  style bt fill:#451a03,stroke:#b45309,color:#fcd34d`;
+  style bt fill:#451a03,stroke:#b45309,color:#fcd34d
+  style val fill:#164e63,stroke:#0e7490,color:#67e8f9`;
 
 export default function EdgarSentinelPage() {
   const [config, setConfig] = useState<PipelineConfig>(DEFAULT_CONFIG);
@@ -167,7 +177,12 @@ export default function EdgarSentinelPage() {
 
       {/* Results */}
       {job?.status === "completed" && job.results && (
-        <BacktestResultsView results={job.results} />
+        <>
+          <BacktestResultsView results={job.results} />
+          {job.results.signalValidation && (
+            <SignalValidationView results={job.results.signalValidation} />
+          )}
+        </>
       )}
     </div>
   );
