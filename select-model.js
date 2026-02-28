@@ -48,7 +48,7 @@ function main() {
   }
 
   // Read state to find the active task
-  const objectives = readJSON(path.join(STATE_DIR, 'dev-objectives.json'));
+  const objectives = readJSON(path.join(STATE_DIR, 'dev-tasks.json'));
   const directives = readJSON(path.join(STATE_DIR, 'directives.json'));
   const nextPrompt = readText(path.join(STATE_DIR, 'next_prompt.txt'));
 

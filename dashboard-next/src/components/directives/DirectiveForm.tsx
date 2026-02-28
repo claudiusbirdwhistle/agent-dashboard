@@ -44,11 +44,20 @@ export default function DirectiveForm({ onSubmit }: DirectiveFormProps) {
   const [priority, setPriority] = useState<DirectivePriority>("normal");
   const [submitting, setSubmitting] = useState(false);
 
+  const isPolicyType = type === "policy";
+
+  function handleTypeChange(newType: DirectiveType) {
+    setType(newType);
+    if (newType === "policy") {
+      setPriority("normal");
+    }
+  }
+
   async function handleSubmit() {
     if (!text.trim()) return;
     setSubmitting(true);
     try {
-      await onSubmit({ text: text.trim(), type, priority });
+      await onSubmit({ text: text.trim(), type, priority: isPolicyType ? "normal" : priority });
       setText("");
     } finally {
       setSubmitting(false);
@@ -75,7 +84,7 @@ export default function DirectiveForm({ onSubmit }: DirectiveFormProps) {
             <button
               key={value}
               type="button"
-              onClick={() => setType(value)}
+              onClick={() => handleTypeChange(value)}
               className={`flex-1 rounded border px-3 py-2 text-sm font-medium transition-colors ${
                 type === value
                   ? "border-blue-500 bg-blue-950 text-blue-300"
@@ -90,14 +99,17 @@ export default function DirectiveForm({ onSubmit }: DirectiveFormProps) {
       </div>
 
       {/* Priority */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Priority</p>
+      <div className={`flex flex-col gap-2 transition-opacity ${isPolicyType ? "opacity-40 pointer-events-none" : ""}`}>
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+          Priority{isPolicyType ? " (n/a for policies)" : ""}
+        </p>
         <div className="flex gap-2">
           {PRIORITIES.map(({ value, label, activeClass, idleClass }) => (
             <button
               key={value}
               type="button"
               onClick={() => setPriority(value)}
+              disabled={isPolicyType}
               className={`flex-1 rounded border px-3 py-2 text-sm font-medium transition-colors ${
                 priority === value ? activeClass : idleClass
               }`}
@@ -114,7 +126,7 @@ export default function DirectiveForm({ onSubmit }: DirectiveFormProps) {
         disabled={submitting || !text.trim()}
         className="rounded bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
-        {submitting ? "Submitting…" : "Submit Task"}
+        {submitting ? "Submitting…" : isPolicyType ? "Submit Policy" : "Submit Task"}
       </button>
     </div>
   );

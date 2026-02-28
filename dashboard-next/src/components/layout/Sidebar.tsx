@@ -15,7 +15,7 @@ const TOOL_LINKS = [
 ];
 
 const QUICK_LINKS = [
-  { label: "Objectives", href: "/files/state/dev-objectives.json" },
+  { label: "Task Backlog", href: "/files/state/dev-tasks.json" },
   { label: "CLAUDE.md", href: "/files/agent/CLAUDE.md" },
   { label: "Next Prompt", href: "/files/state/next_prompt.txt" },
 ];

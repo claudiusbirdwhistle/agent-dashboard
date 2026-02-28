@@ -65,7 +65,7 @@ PHASE_JSON=""
 [[ -f "${STATE_DIR}/phase.json" ]] && PHASE_JSON=$(cat "${STATE_DIR}/phase.json")
 
 OBJECTIVES_JSON=""
-[[ -f "${STATE_DIR}/dev-objectives.json" ]] && OBJECTIVES_JSON=$(cat "${STATE_DIR}/dev-objectives.json")
+[[ -f "${STATE_DIR}/dev-tasks.json" ]] && OBJECTIVES_JSON=$(cat "${STATE_DIR}/dev-tasks.json")
 
 HEALTH_JSON=""
 [[ -f "${STATE_DIR}/health.json" ]] && HEALTH_JSON=$(cat "${STATE_DIR}/health.json")
@@ -94,7 +94,7 @@ ${PHASE_JSON:-"(not yet created)"}
 ### health.json
 ${HEALTH_JSON:-"(not yet created)"}
 
-### dev-objectives.json
+### dev-tasks.json
 ${OBJECTIVES_JSON:-"(not yet created)"}
 
 ### journal.md (last 8KB)

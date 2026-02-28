@@ -25,7 +25,7 @@ export interface AgentStatus {
   phase: string | null;
   stallCount: number;
   totalInvocations: number;
-  activeObjectives: number;
+  activeTasks: number;
   currentDirectiveId: string | null;
   diskUsage: { used: string; available: string; percent: string } | null;
 }
@@ -88,7 +88,7 @@ export interface UnifiedTask {
 
 export interface TasksResponse {
   tasks: UnifiedTask[];
-  activeObjectiveId: string | null;
+  activeTaskId: string | null;
   currentDirectiveId: string | null;
 }
 

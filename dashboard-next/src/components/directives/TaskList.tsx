@@ -239,14 +239,17 @@ function TaskCard({
             </div>
           </div>
           {/* Priority selector */}
-          <div className="flex flex-col gap-1">
-            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Priority</p>
+          <div className={`flex flex-col gap-1 transition-opacity ${editType === "policy" ? "opacity-40 pointer-events-none" : ""}`}>
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+              Priority{editType === "policy" ? " (n/a for policies)" : ""}
+            </p>
             <div className="flex gap-2">
               {PRIORITIES.map(({ value, label, activeClass, idleClass }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setEditPriority(value)}
+                  disabled={editType === "policy"}
                   className={`flex-1 rounded border px-2 py-1 text-xs font-medium transition-colors ${
                     editPriority === value ? activeClass : idleClass
                   }`}

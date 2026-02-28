@@ -41,12 +41,12 @@ function createCoreRouter() {
 
     const phase = readJson(path.join(STATE_DIR, 'phase.json'));
     const health = readJson(path.join(STATE_DIR, 'health.json'));
-    const devObj = readJson(path.join(STATE_DIR, 'dev-objectives.json'));
-    const completedObj = readJson(path.join(STATE_DIR, 'dev-objectives-completed.json'));
-    const activeItems = devObj?.items ?? [];
-    const completedItems = Array.isArray(completedObj) ? completedObj : [];
-    const objectives = [...activeItems, ...completedItems];
-    const activeObjectives = Array.isArray(objectives) ? objectives.filter(o => o.status === 'active') : [];
+    const devTasks = readJson(path.join(STATE_DIR, 'dev-tasks.json'));
+    const completedTasks = readJson(path.join(STATE_DIR, 'dev-tasks-completed.json'));
+    const activeItems = devTasks?.items ?? [];
+    const completedItems = Array.isArray(completedTasks) ? completedTasks : [];
+    const allTasks = [...activeItems, ...completedItems];
+    const activeTasks = Array.isArray(allTasks) ? allTasks.filter(t => t.status === 'active') : [];
 
     let totalInvocations = health?.total_invocations || 0;
     if (!totalInvocations) {
@@ -67,9 +67,9 @@ function createCoreRouter() {
       phase: phase?.phase || null,
       stallCount: health?.consecutive_stalls || health?.stall_count || 0,
       totalInvocations,
-      activeObjectives: activeObjectives.length,
-      objectives: Array.isArray(objectives) ? objectives : [],
-      currentDirectiveId: devObj?.active?.current_directive_id || null,
+      activeTasks: activeTasks.length,
+      allTasks: Array.isArray(allTasks) ? allTasks : [],
+      currentDirectiveId: devTasks?.active?.current_directive_id || null,
       diskUsage
     });
   });
@@ -77,16 +77,16 @@ function createCoreRouter() {
   // ── Unified Tasks ─────────────────────────────────────────────────────
   router.get('/tasks', (req, res) => {
     const directives = readJson(path.join(STATE_DIR, 'directives.json')) || [];
-    const devObj = readJson(path.join(STATE_DIR, 'dev-objectives.json'));
-    const completedObj = readJson(path.join(STATE_DIR, 'dev-objectives-completed.json'));
-    const activeItems = devObj?.items ?? [];
-    const completedItems = Array.isArray(completedObj) ? completedObj : [];
-    const objectives = [...activeItems, ...completedItems];
-    const activeId = devObj?.active?.id ?? null;
-    const currentDirectiveId = devObj?.active?.current_directive_id ?? null;
+    const devTasks = readJson(path.join(STATE_DIR, 'dev-tasks.json'));
+    const completedTasks = readJson(path.join(STATE_DIR, 'dev-tasks-completed.json'));
+    const activeItems = devTasks?.items ?? [];
+    const completedItems = Array.isArray(completedTasks) ? completedTasks : [];
+    const agentTasks = [...activeItems, ...completedItems];
+    const activeId = devTasks?.active?.id ?? null;
+    const currentDirectiveId = devTasks?.active?.current_directive_id ?? null;
 
     // Normalize directives → unified tasks
-    const directiveTasks = (Array.isArray(directives) ? directives : []).map(d => ({
+    const directiveItems = (Array.isArray(directives) ? directives : []).map(d => ({
       id: d.id,
       text: d.text,
       source: 'user',
@@ -100,24 +100,24 @@ function createCoreRouter() {
       is_current: !!(currentDirectiveId && currentDirectiveId === d.id),
     }));
 
-    // Normalize objectives → unified tasks
-    const objectiveTasks = (Array.isArray(objectives) ? objectives : []).map(o => ({
-      id: o.id,
-      text: o.description,
+    // Normalize agent-created tasks → unified tasks
+    const agentItems = (Array.isArray(agentTasks) ? agentTasks : []).map(t => ({
+      id: t.id,
+      text: t.description,
       source: 'agent',
-      status: o.status === 'active' ? 'acknowledged' : o.status === 'blocked' ? 'deferred' : o.status,
+      status: t.status === 'active' ? 'acknowledged' : t.status === 'blocked' ? 'deferred' : t.status,
       priority: 'normal',
       type: 'task',
-      created_at: o.created_at,
-      acknowledged_at: o.status === 'active' ? o.created_at : null,
-      completed_at: o.completed_at || null,
+      created_at: t.created_at,
+      acknowledged_at: t.status === 'active' ? t.created_at : null,
+      completed_at: t.completed_at || null,
       agent_notes: null,
-      is_current: !!(activeId && activeId === o.id && o.status === 'active'),
-      depends_on: o.depends_on || [],
+      is_current: !!(activeId && activeId === t.id && t.status === 'active'),
+      depends_on: t.depends_on || [],
     }));
 
-    const tasks = [...directiveTasks, ...objectiveTasks];
-    res.json({ tasks, activeObjectiveId: activeId, currentDirectiveId });
+    const tasks = [...directiveItems, ...agentItems];
+    res.json({ tasks, activeTaskId: activeId, currentDirectiveId });
   });
 
   // ── Toggle ──────────────────────────────────────────────────────────────

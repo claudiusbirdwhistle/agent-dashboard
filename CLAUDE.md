@@ -30,12 +30,12 @@ file.
 
 You maintain exactly two files every invocation:
 
-**`/state/dev-objectives.json`** — Your work backlog and breadcrumb.
+**`/state/dev-tasks.json`** — Your work backlog and breadcrumb.
 
 ```json
 {
   "active": {
-    "id": "current-objective-id",
+    "id": "current-task-id",
     "notes": "One sentence: what was done and what comes next."
   },
   "items": [
@@ -55,20 +55,20 @@ Set `active` at the start of each invocation (even if unchanged — update
 `notes`). Update it again at the end. Mark completed items with
 `status: "completed"` and `completed_at`.
 
-**`/state/blocked-tasks.json`** — Tracks objectives blocked on background tasks.
+**`/state/blocked-tasks.json`** — Tracks tasks blocked on background processes.
 
 ```json
 [
   {
     "task_id": "ingest-chunk-5",
-    "objective_id": "backtest-batch-ingest",
+    "blocked_task_id": "backtest-batch-ingest",
     "command": "python3 /tools/backtest-batch-runner.py ingest --chunk-size 100",
     "blocked_at": "2026-02-27T20:30:00Z"
   }
 ]
 ```
 
-When empty (`[]`), no objectives are blocked. See **Blocked Objectives**
+When empty (`[]`), no tasks are blocked. See **Blocked Tasks**
 below for the full workflow.
 
 **`/state/next_prompt.txt`** — Written twice per invocation:
@@ -92,7 +92,7 @@ Follow this sequence at the start of every invocation.
 
 1. **Read state (parallel)** — Read ALL state files in a **single parallel
    tool call batch** to minimize turn overhead:
-   - `/state/dev-objectives.json`
+   - `/state/dev-tasks.json`
    - `/state/next_prompt.txt`
    - `/state/directives.json`
    - `/state/skills/index.json`
@@ -100,17 +100,17 @@ Follow this sequence at the start of every invocation.
    - `/state/blocked-tasks.json`
 
    Do NOT read these sequentially — issue all Read calls in one turn.
-   Do NOT read `/state/agent-policies.json` unless a `policy` directive
-   references it (the file may not exist).
-   The `active` field in objectives tells you where the previous invocation
+   Also read `/state/agent-policies.json` if it exists — these are standing
+   rules that apply to all invocations.
+   The `active` field in dev-tasks tells you where the previous invocation
    left off. `next_prompt.txt` tells you what to do next, or what to retry
    if the previous invocation crashed.
 
 1b. **Check blocked tasks** — If `/state/blocked-tasks.json` is non-empty,
    run `python3 /tools/bg-task-check.py check` to see if any background
-   tasks have completed. This may unblock objectives. If the active
-   objective was blocked and is now unblocked, resume it. If still blocked,
-   pick the next unblocked objective to work on.
+   tasks have completed. This may unblock tasks. If the active
+   task was blocked and is now unblocked, resume it. If still blocked,
+   pick the next unblocked task to work on.
 
 2. **Handle pending directives** — Process any `pending` directives in
    `/state/directives.json` before starting other work. Acknowledge each one
@@ -121,12 +121,12 @@ Follow this sequence at the start of every invocation.
 3. **Claim the work (within first 2 turns after reads)** — Overwrite
    `next_prompt.txt` with:
    `"Currently working on: <id> — <one-line context>. If crashed, retry from here."`
-   Update `active.notes` in `dev-objectives.json`. Do this immediately
+   Update `active.notes` in `dev-tasks.json`. Do this immediately
    after state reads — before any exploration or code reads.
 
 4. **Create a task list** — Use the TodoWrite tool to create a checklist for
    this invocation. Final two items must always be:
-   - `Update dev-objectives.json (active + status)`
+   - `Update dev-tasks.json (active + status)`
    - `Update next_prompt.txt (completion)`
    Keep the list to 3–5 items so it fits within the turn budget.
 
@@ -138,7 +138,7 @@ Follow this sequence at the start of every invocation.
 7. **Commit** — Atomic git commit with a conventional message.
 
 8. **Update state** — Complete the final two todo items:
-   - In `dev-objectives.json`: mark objective `completed` if done; move
+   - In `dev-tasks.json`: mark task `completed` if done; move
      `active` to next unblocked item with fresh `notes`.
    - Overwrite `next_prompt.txt` with a **rich breadcrumb**:
      `"Completed: <what>. Next: <id> — <exact first action>. Context: <files read, key facts, what's verified>."`
@@ -152,14 +152,14 @@ You have ~60 max turns. The supervisor will cut you off without warning.
 | Checkpoint | Action |
 |------------|--------|
 | Turn 1 | Read all state (parallel — **one tool call, 5 files**). |
-| Turn 2 | Claim work: write `next_prompt.txt` + update `dev-objectives.json`. |
+| Turn 2 | Claim work: write `next_prompt.txt` + update `dev-tasks.json`. |
 | Turn 3 | TodoWrite task list. Begin work. |
 | Turns 4–18 | First phase of implementation. |
 | **Turn 20** | **EARLY STATE CHECKPOINT.** Write `next_prompt.txt` with progress. |
 | Turns 21–40 | Continue implementation. |
-| **Turn 42** | **MANDATORY PRE-WRAP STATE WRITE.** Write `next_prompt.txt` AND `dev-objectives.json`. |
+| **Turn 42** | **MANDATORY PRE-WRAP STATE WRITE.** Write `next_prompt.txt` AND `dev-tasks.json`. |
 | Turns 43–50 | Verify, commit, push. |
-| Turns 51–56 | Final state writes: `next_prompt.txt`, `dev-objectives.json`, `health.json`, directives. |
+| Turns 51–56 | Final state writes: `next_prompt.txt`, `dev-tasks.json`, `health.json`, directives. |
 | Turns 57–60 | Buffer for error recovery. |
 
 ### State Write Insurance
@@ -186,7 +186,7 @@ finished feature the next invocation can't find.
 ### Stall Thresholds
 
 - 3 consecutive stalls (no commit): change approach.
-- 5 consecutive stalls: pick a different objective.
+- 5 consecutive stalls: pick a different task.
 - 8 consecutive stalls: write `disabled` to `/state/agent_enabled`.
 
 ### Turn Efficiency Rules
@@ -203,12 +203,12 @@ finished feature the next invocation can't find.
 ### State Safety
 
 - Atomic writes: write to a temp file, then rename into place.
-- If `dev-objectives.json` is missing, reconstruct from `next_prompt.txt`
+- If `dev-tasks.json` is missing, reconstruct from `next_prompt.txt`
   and the git log.
 
 ---
 
-## Blocked Objectives (Background Task Model)
+## Blocked Tasks (Background Task Model)
 
 When a task requires a long-running process (data ingestion, batch analysis,
 model training, etc.), **do not wait for it**. Instead:
@@ -216,13 +216,13 @@ model training, etc.), **do not wait for it**. Instead:
 ### Launching a Background Task
 
 ```bash
-python3 /tools/bg-task-check.py launch <task-id> <objective-id> <command...>
+python3 /tools/bg-task-check.py launch <bg-task-id> <blocked-task-id> <command...>
 ```
 
 This will:
 1. Run `<command>` in a **detached process group** (survives invocation kill)
 2. Register the task in `/state/blocked-tasks.json`
-3. Set the linked objective's status to `"blocked"` in `dev-objectives.json`
+3. Set the linked task's status to `"blocked"` in `dev-tasks.json`
 
 The task's output goes to `/state/bg-tasks/<task-id>.log`. A `.status` JSON
 file appears when the task completes.
@@ -236,8 +236,8 @@ python3 /tools/bg-task-check.py check
 ```
 
 This checks all blocked tasks and unblocks completed ones. If the active
-objective was blocked and is now unblocked, resume it. If it's still
-blocked, work on the next unblocked objective.
+task was blocked and is now unblocked, resume it. If it's still
+blocked, work on the next unblocked task.
 
 To see detailed status without modifying state:
 
@@ -249,19 +249,19 @@ python3 /tools/bg-task-check.py status
 
 1. You need to ingest 500 tickers (takes ~30 min).
 2. Launch: `python3 /tools/bg-task-check.py launch ingest-run backtest-batch-ingest python3 /tools/backtest-batch-runner.py ingest --chunk-size 500`
-3. Objective `backtest-batch-ingest` is now `"blocked"`.
-4. Switch `active` to the next unblocked objective (e.g., mobile UI task).
-5. Work on that objective for this invocation.
-6. Next invocation: `bg-task-check.py check` finds ingestion complete → unblocks objective → resume.
+3. Task `backtest-batch-ingest` is now `"blocked"`.
+4. Switch `active` to the next unblocked task (e.g., mobile UI task).
+5. Work on that task for this invocation.
+6. Next invocation: `bg-task-check.py check` finds ingestion complete → unblocks task → resume.
 
 ### Key Rules
 
 - **Never wait** for a long-running command within the invocation. Launch it
-  in the background and block the objective.
-- **One background task per objective.** If you need multiple steps, chain
+  in the background and block the task.
+- **One background process per task.** If you need multiple steps, chain
   them in the command or use a wrapper script.
-- A `"blocked"` objective is **not idle** — it has work running. Do not
-  disable the agent if blocked objectives exist.
+- A `"blocked"` task is **not idle** — it has work running. Do not
+  disable the agent if blocked tasks exist.
 - Background tasks survive invocation termination because they run in a
   separate process group via `setsid`.
 
@@ -294,16 +294,16 @@ Check for pending directives at every invocation start.
 
 | Type | What it means | How to handle |
 |------|--------------|---------------|
-| `task` | A discrete unit of work | Add to `dev-objectives.json` as a new item. Complete it, mark done. |
-| `focus` | Shift overall priority | Reorder `dev-objectives.json`, update `active` to the new focus. Acknowledge immediately in `agent_notes`. |
-| `policy` | A standing rule | Append to `/state/agent-policies.json`. Apply to all future invocations. |
+| `task` | A discrete unit of work | Add to `dev-tasks.json` as a new item. Complete it, mark done. |
+| `focus` | Shift overall priority | Reorder `dev-tasks.json`, update `active` to the new focus. Acknowledge immediately in `agent_notes`. |
+| `policy` | A standing rule | Auto-written to `/state/agent-policies.json` on creation. Read and apply to all future invocations. Policies have no priority level. |
 
 ### Priorities
 
 | Priority | How to handle |
 |----------|--------------|
 | `urgent` | Stop current work. Handle this directive before anything else in this invocation. Acknowledge with a note. |
-| `normal` | Complete current unit of work, then handle this as the next objective. |
+| `normal` | Complete current unit of work, then handle this as the next task. |
 | `background` | Add to backlog. Work on only when no `urgent` or `normal` items remain. |
 
 ### Lifecycle
@@ -360,17 +360,17 @@ Before self-disabling, check **both** of these:
 1. **No actionable directives** — no directive in `/state/directives.json`
    has `status: "pending"` or `status: "acknowledged"` (i.e., not yet
    `completed`/`dismissed`/`deferred`).
-2. **No pending work items** — no item in `/state/dev-objectives.json` has
+2. **No pending work items** — no item in `/state/dev-tasks.json` has
    `status: "pending"` or `status: "active"`.
 3. **No blocked tasks** — `/state/blocked-tasks.json` is empty (`[]`).
-   Blocked objectives have background work running and need the agent to
+   Blocked tasks have background work running and need the agent to
    check back and resume when complete.
 
 **Only if ALL conditions are true**, write `"disabled"` to
 `/state/agent_enabled` and stop. Do not invent new work — wait for the
 operator to send a new directive.
 
-**If either condition is false, keep working.** Pending objectives count as
+**If either condition is false, keep working.** Pending tasks count as
 work regardless of who created them (operator or agent) and regardless of
 priority (urgent, normal, or background). Background-priority items are
 real work — do them when nothing higher-priority remains.

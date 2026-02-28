@@ -31,6 +31,6 @@ fi
 echo ""
 [[ -f "${STATE_DIR}/phase.json" ]] && echo "  Phase:      $(jq -r '.phase // "unknown"' "${STATE_DIR}/phase.json" 2>/dev/null)"
 [[ -f "${STATE_DIR}/health.json" ]] && echo "  Stalls:     $(jq -r '.stall_count // 0' "${STATE_DIR}/health.json" 2>/dev/null)" && echo "  Invocations: $(jq -r '.total_invocations // 0' "${STATE_DIR}/health.json" 2>/dev/null)"
-[[ -f "${STATE_DIR}/dev-objectives.json" ]] && echo "  Objectives: $(jq '[.items[] | select(.status == "active" or .status == "pending")] | length' "${STATE_DIR}/dev-objectives.json" 2>/dev/null) active/pending"
+[[ -f "${STATE_DIR}/dev-tasks.json" ]] && echo "  Tasks: $(jq '[.items[] | select(.status == "active" or .status == "pending")] | length' "${STATE_DIR}/dev-tasks.json" 2>/dev/null) active/pending"
 echo ""
 echo "============================================================"

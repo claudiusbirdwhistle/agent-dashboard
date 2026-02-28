@@ -35,7 +35,7 @@ export default function HomePage() {
   const phase = status?.phase ?? "—";
   const invocations = status?.totalInvocations ?? "—";
   const stalls = status?.stallCount ?? "—";
-  const activeObjectives = status?.activeObjectives ?? "—";
+  const activeTasks = status?.activeTasks ?? "—";
   const disk = status?.diskUsage ? `${status.diskUsage.used} / ${status.diskUsage.percent}` : null;
 
   return (
@@ -53,7 +53,7 @@ export default function HomePage() {
           />
           <KpiCard label="Phase" value={phase} />
           <KpiCard label="Invocations" value={invocations} />
-          <KpiCard label="Active Goals" value={activeObjectives} />
+          <KpiCard label="Active Tasks" value={activeTasks} />
           <KpiCard label="Stalls" value={stalls} />
           {disk && <KpiCard label="Disk" value={disk} />}
         </div>

@@ -203,22 +203,22 @@ echo "=== End: $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> "${INVOCATION_LOG}"
 # for rich context so the next invocation doesn't waste turns reorienting.
 
 NEXT_PROMPT_MTIME=$(stat -c %Y "${STATE_DIR}/next_prompt.txt" 2>/dev/null || echo 0)
-OBJECTIVES_MTIME=$(stat -c %Y "${STATE_DIR}/dev-objectives.json" 2>/dev/null || echo 0)
+OBJECTIVES_MTIME=$(stat -c %Y "${STATE_DIR}/dev-tasks.json" 2>/dev/null || echo 0)
 
 if [[ "${NEXT_PROMPT_MTIME}" -lt "${INVOCATION_START}" ]]; then
     # next_prompt.txt was NOT updated — use enhanced recovery
     "${AGENT_DIR}/state-recovery.sh" "${INVOCATION_LOG}" "${STATE_DIR}" "${AGENT_DIR}" \
         2>>"${LOG_DIR}/daemon.log" || {
         # Fallback: minimal breadcrumb if recovery script fails
-        echo "WARNING: Previous invocation ended without updating state. Check git log and dev-objectives.json." \
+        echo "WARNING: Previous invocation ended without updating state. Check git log and dev-tasks.json." \
             > "${STATE_DIR}/next_prompt.txt"
     }
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] STATE RECOVERY: next_prompt.txt not updated. Enhanced recovery breadcrumb written." >> "${LOG_DIR}/daemon.log"
 elif [[ "${OBJECTIVES_MTIME}" -lt "${INVOCATION_START}" ]]; then
-    # next_prompt.txt updated but dev-objectives.json wasn't — partial state write
-    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] PARTIAL STATE: next_prompt.txt updated but dev-objectives.json was not. Agent may have been cut off during wrap-up." >> "${LOG_DIR}/daemon.log"
+    # next_prompt.txt updated but dev-tasks.json wasn't — partial state write
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] PARTIAL STATE: next_prompt.txt updated but dev-tasks.json was not. Agent may have been cut off during wrap-up." >> "${LOG_DIR}/daemon.log"
     # Append a warning to existing next_prompt.txt
-    printf '\n\nWARNING: dev-objectives.json was NOT updated last invocation. Verify active objective and status are current before starting work.' \
+    printf '\n\nWARNING: dev-tasks.json was NOT updated last invocation. Verify active task and status are current before starting work.' \
         >> "${STATE_DIR}/next_prompt.txt"
 fi
 
@@ -258,7 +258,7 @@ os.rename(tmp, health_path)
 
 # ── Post-invocation idle-policy safety net ─────────────────────────────
 # If the agent wrote "disabled" but there are still pending/active items in
-# dev-objectives.json or pending directives, auto-re-enable. This prevents
+# dev-tasks.json or pending directives, auto-re-enable. This prevents
 # premature self-disabling when background work remains.
 
 python3 -c "
@@ -275,12 +275,12 @@ try:
 except FileNotFoundError:
     raise SystemExit(0)
 
-# Check for pending objectives
+# Check for pending tasks
 has_work = False
 try:
-    with open(os.path.join(state_dir, 'dev-objectives.json')) as f:
-        objectives = json.load(f)
-    for item in objectives.get('items', []):
+    with open(os.path.join(state_dir, 'dev-tasks.json')) as f:
+        tasks = json.load(f)
+    for item in tasks.get('items', []):
         if item.get('status') in ('pending', 'active', 'blocked'):
             has_work = True
             break

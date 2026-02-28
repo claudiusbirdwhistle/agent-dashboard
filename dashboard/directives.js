@@ -10,6 +10,23 @@ const VALID_TYPES = ['task', 'focus', 'policy'];
 const VALID_PRIORITIES = ['urgent', 'normal', 'background'];
 const VALID_STATUSES = ['pending', 'acknowledged', 'completed', 'deferred', 'dismissed'];
 
+const POLICIES_FILE = path.join('/state', 'agent-policies.json');
+
+function readPolicies() {
+  try {
+    return JSON.parse(fs.readFileSync(POLICIES_FILE, 'utf-8'));
+  } catch {
+    return [];
+  }
+}
+
+function writePolicies(policies) {
+  const dir = path.dirname(POLICIES_FILE);
+  const tmp = path.join(dir, `.policies-${crypto.randomBytes(4).toString('hex')}.tmp`);
+  fs.writeFileSync(tmp, JSON.stringify(policies, null, 2), 'utf-8');
+  fs.renameSync(tmp, POLICIES_FILE);
+}
+
 function generateId() {
   const ms = Date.now();
   const hex = crypto.randomBytes(3).toString('hex');
@@ -73,6 +90,17 @@ function createDirectivesRouter(directivesFile) {
     const directives = readDirectives(directivesFile);
     directives.push(directive);
     writeDirectives(directivesFile, directives);
+
+    // Auto-write policy directives to the policies file
+    if (type === 'policy') {
+      const policies = readPolicies();
+      policies.push({
+        id: directive.id,
+        text: directive.text,
+        created_at: directive.created_at,
+      });
+      writePolicies(policies);
+    }
 
     return res.status(201).json(directive);
   });

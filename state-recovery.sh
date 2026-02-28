@@ -26,12 +26,12 @@ log_file = sys.argv[1]
 state_dir = sys.argv[2]
 agent_dir = sys.argv[3]
 
-# --- Parse dev-objectives.json for baseline context ---
+# --- Parse dev-tasks.json for baseline context ---
 active_id = "unknown"
 active_notes = "none"
 current_directive_id = None
 try:
-    with open(os.path.join(state_dir, "dev-objectives.json")) as f:
+    with open(os.path.join(state_dir, "dev-tasks.json")) as f:
         obj = json.load(f)
         active = obj.get("active", {})
         active_id = active.get("id", "unknown")
@@ -154,7 +154,7 @@ except Exception:
 files_written = list(dict.fromkeys(files_written))
 files_edited = list(dict.fromkeys(files_edited))
 # Only keep reads that aren't state files and weren't also written/edited
-state_paths = {"/state/dev-objectives.json", "/state/next_prompt.txt",
+state_paths = {"/state/dev-tasks.json", "/state/next_prompt.txt",
                "/state/directives.json", "/state/health.json",
                "/state/skills/index.json"}
 files_read = [f for f in dict.fromkeys(files_read)
@@ -166,7 +166,7 @@ lines.append("WARNING: Previous invocation ended without updating state (crashed
 lines.append(f"Turns used: ~{turn_count}")
 lines.append("")
 
-lines.append(f"Active objective: {active_id}")
+lines.append(f"Active task: {active_id}")
 lines.append(f"Last known notes: {active_notes}")
 if directive_text:
     lines.append(f"Directive text: {directive_text}")
@@ -210,7 +210,7 @@ if last_assistant_text:
     lines.append(f"Last assistant output: {truncated}")
     lines.append("")
 
-lines.append("Action: Read dev-objectives.json, check git log/diff for partial work, and resume.")
+lines.append("Action: Read dev-tasks.json, check git log/diff for partial work, and resume.")
 lines.append("IMPORTANT: Write state EARLY this invocation. Do mid-invocation save by turn 12.")
 
 # --- Write atomically ---

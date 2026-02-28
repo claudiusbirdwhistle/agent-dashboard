@@ -122,7 +122,7 @@ export default function FilesPage() {
   );
 }
 
-/** Auto-loads a file when navigated to via URL (e.g. /files/state/dev-objectives.json) */
+/** Auto-loads a file when navigated to via URL (e.g. /files/state/dev-tasks.json) */
 function FileAutoLoad({ path }: { path: string }) {
   const { data, isLoading } = useFile(path);
 

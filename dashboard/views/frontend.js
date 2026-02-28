@@ -205,7 +205,7 @@ async function poll(){
   let h='';
   if(S.phase) h+='<span>'+esc(S.phase)+'</span>';
   h+='<span>'+S.totalInvocations+' runs</span>';
-  if(S.activeObjectives) h+='<span>'+S.activeObjectives+' obj</span>';
+  if(S.activeTasks) h+='<span>'+S.activeTasks+' tasks</span>';
   if(S.stallCount) h+='<span style="color:var(--yellow)">'+S.stallCount+' stalls</span>';
   s.innerHTML=h;
   if(S.diskUsage){
