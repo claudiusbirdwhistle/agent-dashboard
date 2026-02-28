@@ -50,7 +50,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-zinc-900 border-t border-zinc-800 pb-[env(safe-area-inset-bottom)]">
+    <nav className="shrink-0 md:hidden bg-zinc-900 border-t border-zinc-800 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-stretch">
         {TABS.map(({ label, href, icon }) => {
           const isActive =
