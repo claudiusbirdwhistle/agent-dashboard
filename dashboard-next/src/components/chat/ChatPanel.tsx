@@ -2,17 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+import { useChat } from "./ChatProvider";
 
 export default function ChatPanel() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, setMessages, sessionId, setSessionId, clearChat } = useChat();
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -105,7 +100,7 @@ export default function ChatPanel() {
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, sessionId]);
+  }, [input, isStreaming, sessionId, setMessages, setSessionId]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -114,9 +109,8 @@ export default function ChatPanel() {
     }
   }
 
-  function clearChat() {
-    setMessages([]);
-    setSessionId(null);
+  function handleClear() {
+    clearChat();
     setError(null);
   }
 
@@ -134,7 +128,7 @@ export default function ChatPanel() {
           )}
         </div>
         <button
-          onClick={clearChat}
+          onClick={handleClear}
           className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 rounded hover:bg-zinc-800"
         >
           Clear
