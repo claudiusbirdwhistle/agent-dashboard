@@ -250,8 +250,8 @@ function TaskCard({
                   type="button"
                   onClick={() => setEditPriority(value)}
                   disabled={editType === "policy"}
-                  className={`flex-1 rounded border px-2 py-1 text-xs font-medium transition-colors ${
-                    editPriority === value ? activeClass : idleClass
+                  className={`flex-1 rounded border px-2 py-1 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-zinc-700 disabled:hover:text-zinc-500 ${
+                    editPriority === value && editType !== "policy" ? activeClass : idleClass
                   }`}
                 >
                   {label}

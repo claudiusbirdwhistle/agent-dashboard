@@ -123,6 +123,47 @@ describe("DirectiveForm", () => {
     });
   });
 
+  it("disables priority buttons when policy type is selected", async () => {
+    const user = userEvent.setup();
+    render(<DirectiveForm onSubmit={mockOnSubmit} />);
+
+    // Click the "Policy" type button
+    await user.click(screen.getByRole("button", { name: /^policy$/i }));
+
+    // All priority buttons should be disabled
+    expect(screen.getByRole("button", { name: /urgent/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /normal/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /background/i })).toBeDisabled();
+
+    // Submit should force priority to "normal"
+    await user.type(
+      screen.getByPlaceholderText(/what should the agent do/i),
+      "Always use TDD"
+    );
+    await user.click(screen.getByRole("button", { name: /submit policy/i }));
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        text: "Always use TDD",
+        type: "policy",
+        priority: "normal",
+      });
+    });
+  });
+
+  it("re-enables priority buttons when switching back from policy", async () => {
+    const user = userEvent.setup();
+    render(<DirectiveForm onSubmit={mockOnSubmit} />);
+
+    // Select policy, then switch back to task
+    await user.click(screen.getByRole("button", { name: /^policy$/i }));
+    expect(screen.getByRole("button", { name: /urgent/i })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: /^task$/i }));
+    expect(screen.getByRole("button", { name: /urgent/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /normal/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /background/i })).not.toBeDisabled();
+  });
+
   it("disables submit button while submitting", async () => {
     let resolveSubmit: () => void;
     const pendingSubmit = new Promise<void>((resolve) => {

@@ -110,8 +110,8 @@ export default function DirectiveForm({ onSubmit }: DirectiveFormProps) {
               type="button"
               onClick={() => setPriority(value)}
               disabled={isPolicyType}
-              className={`flex-1 rounded border px-3 py-2 text-sm font-medium transition-colors ${
-                priority === value ? activeClass : idleClass
+              className={`flex-1 rounded border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-zinc-700 disabled:hover:text-zinc-500 ${
+                priority === value && !isPolicyType ? activeClass : idleClass
               }`}
             >
               {label}
