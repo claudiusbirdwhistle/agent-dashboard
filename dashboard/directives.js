@@ -10,7 +10,10 @@ const VALID_TYPES = ['task', 'focus', 'policy'];
 const VALID_PRIORITIES = ['urgent', 'normal', 'background'];
 const VALID_STATUSES = ['pending', 'acknowledged', 'completed', 'deferred', 'dismissed'];
 
+const { execSync } = require('child_process');
+
 const POLICIES_FILE = path.join('/state', 'agent-policies.json');
+const ENABLED_FLAG = path.join('/state', 'agent_enabled');
 
 function readPolicies() {
   try {
@@ -100,6 +103,26 @@ function createDirectivesRouter(directivesFile) {
         created_at: directive.created_at,
       });
       writePolicies(policies);
+    }
+
+    // Auto-enable agent when a task or focus directive is added while disabled
+    if (type !== 'policy') {
+      try {
+        const currentState = fs.readFileSync(ENABLED_FLAG, 'utf-8').trim();
+        if (currentState !== 'enabled') {
+          fs.writeFileSync(ENABLED_FLAG, 'enabled');
+          try { execSync('sudo systemctl start agent-supervisor', { stdio: 'ignore' }); } catch {
+            try {
+              const spid = fs.readFileSync('/agent/.run/supervisor.pid', 'utf-8').trim();
+              const alreadyRunning = spid && fs.existsSync('/proc/' + spid);
+              if (!alreadyRunning) {
+                execSync('nohup /agent/supervisor.sh >> /var/log/agent/daemon.log 2>&1 &', { stdio: 'ignore' });
+              }
+            } catch { /* best effort */ }
+          }
+          directive._auto_enabled = true;
+        }
+      } catch { /* best effort — don't fail directive creation */ }
     }
 
     return res.status(201).json(directive);
