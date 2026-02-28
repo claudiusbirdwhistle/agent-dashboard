@@ -10,7 +10,7 @@ function createChatRouter() {
   const router = express.Router();
 
   router.post('/chat/send', (req, res) => {
-    const { message, sessionId, model } = req.body || {};
+    const { message, sessionId, model, effort } = req.body || {};
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'message is required' });
     }
@@ -28,13 +28,19 @@ function createChatRouter() {
       'X-Accel-Buffering': 'no',
     });
 
+    const validModels = ['sonnet', 'opus', 'haiku'];
+    const validEfforts = ['low', 'medium', 'high'];
+    const selectedModel = validModels.includes(model) ? model : 'sonnet';
+    const selectedEffort = validEfforts.includes(effort) ? effort : 'high';
+
     const args = [
       '-p',
       '--output-format', 'stream-json',
       '--verbose',
       '--include-partial-messages',
       '--dangerously-skip-permissions',
-      '--model', model || 'sonnet',
+      '--model', selectedModel,
+      '--effort', selectedEffort,
       '--system-prompt',
       'You are a helpful assistant embedded in a dashboard. Be concise. Use markdown formatting when appropriate.',
     ];

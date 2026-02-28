@@ -3,9 +3,32 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "./ChatProvider";
+import type { ChatModel, EffortLevel } from "./ChatProvider";
+
+const MODEL_OPTIONS: { value: ChatModel; label: string }[] = [
+  { value: "haiku", label: "Haiku" },
+  { value: "sonnet", label: "Sonnet" },
+  { value: "opus", label: "Opus" },
+];
+
+const EFFORT_OPTIONS: { value: EffortLevel; label: string }[] = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Med" },
+  { value: "high", label: "High" },
+];
 
 export default function ChatPanel() {
-  const { messages, setMessages, sessionId, setSessionId, clearChat } = useChat();
+  const {
+    messages,
+    setMessages,
+    sessionId,
+    setSessionId,
+    model,
+    setModel,
+    effort,
+    setEffort,
+    clearChat,
+  } = useChat();
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +64,7 @@ export default function ChatPanel() {
       const res = await fetch("/api/chat/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, sessionId }),
+        body: JSON.stringify({ message: text, sessionId, model, effort }),
       });
 
       if (!res.ok || !res.body) {
@@ -100,7 +123,7 @@ export default function ChatPanel() {
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, sessionId, setMessages, setSessionId]);
+  }, [input, isStreaming, sessionId, model, effort, setMessages, setSessionId]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -133,6 +156,51 @@ export default function ChatPanel() {
         >
           Clear
         </button>
+      </div>
+
+      {/* Model & Effort selectors */}
+      <div className="flex items-center gap-3 px-4 py-1.5 border-b border-zinc-800/50 bg-zinc-900/50">
+        {/* Model selector */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Model</span>
+          <div className="flex rounded-md overflow-hidden border border-zinc-700">
+            {MODEL_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setModel(opt.value)}
+                disabled={isStreaming}
+                className={`px-2 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50 ${
+                  model === opt.value
+                    ? "bg-blue-600 text-white"
+                    : "bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Effort / thinking level selector */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Thinking</span>
+          <div className="flex rounded-md overflow-hidden border border-zinc-700">
+            {EFFORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setEffort(opt.value)}
+                disabled={isStreaming}
+                className={`px-2 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50 ${
+                  effort === opt.value
+                    ? "bg-amber-600 text-white"
+                    : "bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Messages */}
