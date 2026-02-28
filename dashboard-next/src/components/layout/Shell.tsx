@@ -15,7 +15,7 @@ export default function Shell({ children }: ShellProps) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   return (
-    <div className="flex min-h-screen bg-zinc-950 text-white">
+    <div className="flex h-screen overflow-hidden bg-zinc-950 text-white">
       {/* Mobile overlay backdrop */}
       {sidebarOpen && (
         <div
@@ -38,7 +38,7 @@ export default function Shell({ children }: ShellProps) {
       <div className="flex flex-col flex-1 min-w-0">
         <Header onMenuToggle={toggleSidebar} />
         {/* pb-16 on mobile to clear BottomNav */}
-        <main className="flex-1 overflow-auto pb-16 md:pb-0">{children}</main>
+        <main className="flex-1 min-h-0 overflow-auto flex flex-col pb-16 md:pb-0">{children}</main>
       </div>
 
       {/* Bottom tab bar — mobile only */}
