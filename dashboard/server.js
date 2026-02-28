@@ -10,6 +10,7 @@ const { createToolsRouter } = require('./routes/tools');
 const { createDirectivesRouter } = require('./directives');
 const { createRateLimitRouter } = require('./rate-limit');
 const { createEdgarSentinelRouter } = require('./routes/edgar-sentinel');
+const { createChatRouter } = require('./routes/chat');
 const { LOGIN_HTML } = require('./views/login');
 const { FRONTEND_HTML } = require('./views/frontend');
 
@@ -29,6 +30,7 @@ app.use('/api', createAgentModelRouter());
 app.use('/api', createDirectivesRouter(DIRECTIVES_FILE));
 app.use('/api', createRateLimitRouter(LOG_DIR));
 app.use('/api', createEdgarSentinelRouter());
+app.use('/api', createChatRouter());
 
 // ── Research tools (API + HTML pages) ───────────────────────────────────
 app.use(createToolsRouter());
