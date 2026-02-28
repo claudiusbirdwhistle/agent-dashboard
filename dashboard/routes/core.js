@@ -42,7 +42,10 @@ function createCoreRouter() {
     const phase = readJson(path.join(STATE_DIR, 'phase.json'));
     const health = readJson(path.join(STATE_DIR, 'health.json'));
     const devObj = readJson(path.join(STATE_DIR, 'dev-objectives.json'));
-    const objectives = devObj?.items ?? [];
+    const completedObj = readJson(path.join(STATE_DIR, 'dev-objectives-completed.json'));
+    const activeItems = devObj?.items ?? [];
+    const completedItems = Array.isArray(completedObj) ? completedObj : [];
+    const objectives = [...activeItems, ...completedItems];
     const activeObjectives = Array.isArray(objectives) ? objectives.filter(o => o.status === 'active') : [];
 
     let totalInvocations = health?.total_invocations || 0;
@@ -75,7 +78,10 @@ function createCoreRouter() {
   router.get('/tasks', (req, res) => {
     const directives = readJson(path.join(STATE_DIR, 'directives.json')) || [];
     const devObj = readJson(path.join(STATE_DIR, 'dev-objectives.json'));
-    const objectives = devObj?.items ?? [];
+    const completedObj = readJson(path.join(STATE_DIR, 'dev-objectives-completed.json'));
+    const activeItems = devObj?.items ?? [];
+    const completedItems = Array.isArray(completedObj) ? completedObj : [];
+    const objectives = [...activeItems, ...completedItems];
     const activeId = devObj?.active?.id ?? null;
     const currentDirectiveId = devObj?.active?.current_directive_id ?? null;
 
