@@ -1,0 +1,3 @@
+[submodule "edgar-sentinel"]
+	path = edgar-sentinel
+	url = https://github.com/claudiusbirdwhistle/edgar-sentinel.git
