@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "./ChatProvider";
-import type { ChatModel, EffortLevel } from "./ChatProvider";
+import type { ChatModel, EffortLevel, ChatSession } from "./ChatProvider";
 
 const MODEL_OPTIONS: { value: ChatModel; label: string }[] = [
   { value: "haiku", label: "Haiku" },
@@ -32,6 +32,10 @@ export default function ChatPanel() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [loadingResume, setLoadingResume] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -48,6 +52,36 @@ export default function ChatPanel() {
       ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
     }
   }, [input]);
+
+  // Fetch sessions when history panel opens
+  useEffect(() => {
+    if (!showHistory) return;
+    setLoadingSessions(true);
+    fetch("/api/chat/sessions")
+      .then((r) => r.json())
+      .then((data) => setSessions(Array.isArray(data) ? data : []))
+      .catch(() => setSessions([]))
+      .finally(() => setLoadingSessions(false));
+  }, [showHistory]);
+
+  const resumeSession = useCallback(
+    async (session: ChatSession) => {
+      setLoadingResume(session.id);
+      try {
+        const res = await fetch(`/api/chat/sessions/${session.id}/messages`);
+        const data = await res.json();
+        setMessages(data.messages || []);
+        setSessionId(session.id);
+        setShowHistory(false);
+        setError(null);
+      } catch {
+        setError("Failed to load session");
+      } finally {
+        setLoadingResume(null);
+      }
+    },
+    [setMessages, setSessionId]
+  );
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
@@ -137,6 +171,16 @@ export default function ChatPanel() {
     setError(null);
   }
 
+  function formatTime(iso: string) {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    if (diff < 60_000) return "just now";
+    if (diff < 3600_000) return `${Math.floor(diff / 60_000)}m ago`;
+    if (diff < 86400_000) return `${Math.floor(diff / 3600_000)}h ago`;
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
@@ -150,17 +194,31 @@ export default function ChatPanel() {
             </span>
           )}
         </div>
-        <button
-          onClick={handleClear}
-          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 rounded hover:bg-zinc-800"
-        >
-          Clear
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowHistory((v) => !v)}
+            className={`text-xs transition-colors px-2 py-1 rounded ${
+              showHistory
+                ? "text-blue-400 bg-blue-400/10"
+                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+            }`}
+            title="Session history"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <button
+            onClick={handleClear}
+            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 rounded hover:bg-zinc-800"
+          >
+            Clear
+          </button>
+        </div>
       </div>
 
       {/* Model & Effort selectors */}
       <div className="flex items-center gap-3 px-4 py-1.5 border-b border-zinc-800/50 bg-zinc-900/50">
-        {/* Model selector */}
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Model</span>
           <div className="flex rounded-md overflow-hidden border border-zinc-700">
@@ -180,8 +238,6 @@ export default function ChatPanel() {
             ))}
           </div>
         </div>
-
-        {/* Effort / thinking level selector */}
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Thinking</span>
           <div className="flex rounded-md overflow-hidden border border-zinc-700">
@@ -202,6 +258,53 @@ export default function ChatPanel() {
           </div>
         </div>
       </div>
+
+      {/* Session History Panel */}
+      {showHistory && (
+        <div className="border-b border-zinc-800 bg-zinc-900/80 max-h-64 overflow-y-auto">
+          <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-zinc-500 font-medium border-b border-zinc-800/50">
+            Past Sessions
+          </div>
+          {loadingSessions ? (
+            <div className="px-4 py-3 text-xs text-zinc-500">Loading...</div>
+          ) : sessions.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-zinc-500">No past sessions</div>
+          ) : (
+            <div>
+              {sessions.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => resumeSession(s)}
+                  disabled={loadingResume === s.id || isStreaming}
+                  className={`w-full text-left px-4 py-2 hover:bg-zinc-800 transition-colors border-b border-zinc-800/30 disabled:opacity-50 ${
+                    sessionId === s.id ? "bg-zinc-800/60" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-zinc-300 truncate flex-1">
+                      {loadingResume === s.id ? "Loading..." : s.preview}
+                    </span>
+                    <span className="text-[10px] text-zinc-600 shrink-0">
+                      {formatTime(s.lastActive)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-zinc-600 font-mono">
+                      {s.id.slice(0, 8)}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">
+                      {s.model}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">
+                      {s.messageCount} msg{s.messageCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0">

@@ -10,6 +10,15 @@ interface Message {
 export type ChatModel = "sonnet" | "opus" | "haiku";
 export type EffortLevel = "low" | "medium" | "high";
 
+export interface ChatSession {
+  id: string;
+  preview: string;
+  model: string;
+  createdAt: string;
+  lastActive: string;
+  messageCount: number;
+}
+
 interface ChatContextValue {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
