@@ -69,13 +69,21 @@ export default function ChatPanel() {
       setLoadingResume(session.id);
       try {
         const res = await fetch(`/api/chat/sessions/${session.id}/messages`);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("Invalid response");
+        }
         const data = await res.json();
-        setMessages(data.messages || []);
+        const msgs = Array.isArray(data.messages) ? data.messages : [];
+        setMessages(msgs);
         setSessionId(session.id);
         setShowHistory(false);
-        setError(null);
-      } catch {
-        setError("Failed to load session");
+        setError(msgs.length === 0 ? "Session has no messages" : null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load session");
       } finally {
         setLoadingResume(null);
       }
@@ -210,9 +218,13 @@ export default function ChatPanel() {
           </button>
           <button
             onClick={handleClear}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 rounded hover:bg-zinc-800"
+            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 rounded hover:bg-zinc-800 flex items-center gap-1"
+            title="New chat"
           >
-            Clear
+            <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            New Chat
           </button>
         </div>
       </div>
